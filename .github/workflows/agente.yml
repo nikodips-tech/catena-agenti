@@ -1,0 +1,188 @@
+# Un agente della catena, qualunque sia il ruolo (team-leader, developer, revisore, editor).
+# Riutilizzabile (workflow_call): lo chiama il wrapper catena.yml di ogni progetto.
+#
+# Tre job:
+#   inizio  segna `in-corso` sul sotto-task (chi esegue Claude non scrive sulle issue)
+#   agente  token in SOLA LETTURA: prepara i dati, esegue Claude Code (la CLI) e raccoglie
+#           il risultato in un artifact; Claude non ha git, gh né il token
+#   esito   token in scrittura, niente Claude: commit, push, commenti, etichette, passo dopo
+# Un'esecuzione annullata non scrive niente sull'issue.
+name: Catena agente
+
+on:
+  workflow_call:
+    inputs:
+      ruolo:
+        description: team-leader | developer | revisore | editor
+        type: string
+        required: true
+      issue:
+        description: Numero dell'issue principale
+        type: string
+        required: true
+      sottotask:
+        description: Numero del sotto-task (vuoto per team leader, revisore, editor; uguale all'issue in corsia diretta)
+        type: string
+        default: ""
+      tentativo:
+        description: Tentativo del developer (1-3)
+        type: string
+        default: "1"
+      nota:
+        description: Testo per l'agente (errore del tentativo prima, nota del team leader, log della CI)
+        type: string
+        default: ""
+      catena_repo:
+        description: Repository della catena da cui leggere script e prompt
+        type: string
+        default: nikodips-tech/catena-agenti
+      claude_code_versione:
+        description: Versione della CLI di Claude Code (npm)
+        type: string
+        default: latest
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: true
+      CATENA_TOKEN:
+        description: Solo se il repository della catena è privato
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  CATENA: ${{ github.workspace }}/catena
+  REPO_DIR: ${{ github.workspace }}/repo
+  GH_REPO: ${{ github.repository }}
+  PIATTAFORMA: github
+  ISSUE: ${{ inputs.issue }}
+  SOTTOTASK: ${{ inputs.sottotask }}
+  TENTATIVO: ${{ inputs.tentativo }}
+  NOTA: ${{ inputs.nota }}
+  PROPRIETARIO: ${{ github.repository_owner }}
+
+jobs:
+  inizio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Sotto-task in corso
+        if: inputs.sottotask != '' && inputs.sottotask != inputs.issue && inputs.ruolo == 'developer'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue edit "$SOTTOTASK" --add-label in-corso
+
+  agente:
+    needs: inizio
+    runs-on: ubuntu-24.04
+    # Il tetto di tempo del ruolo sta sul passo di Claude (sotto); il job ha 15 minuti in più
+    # per dipendenze, raccolta e controlli, così la raccolta scrive sempre il suo esito
+    timeout-minutes: ${{ fromJSON('{"team-leader":35,"developer":70,"revisore":40,"editor":30}')[inputs.ruolo] }}
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+
+      - name: Ramo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "$CATENA/scripts/ramo.sh" "${{ inputs.ruolo }}"
+
+      - name: Contesto
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "$CATENA/scripts/contesto.sh" "${{ inputs.ruolo }}"
+
+      # Il checkout tiene il token di Actions in .git/config: via, prima di Claude
+      - name: Credenziali via
+        run: git -C "$REPO_DIR" config --unset-all http.https://github.com/.extraheader || true
+
+      # Le dipendenze prima di Claude: così il loro output non entra nel suo contesto
+      - name: Dipendenze
+        if: inputs.ruolo == 'developer'
+        run: bash "$CATENA/scripts/controlli.sh" install
+
+      - name: Claude Code
+        run: npm install -g --silent "@anthropic-ai/claude-code@${{ inputs.claude_code_versione }}"
+
+      # Nessun GH_TOKEN in questo passo: Claude vede solo il checkout.
+      # Stessi tetti di scripts/ruoli.sh e docs/specifica.md
+      - name: Agente
+        timeout-minutes: ${{ fromJSON('{"team-leader":20,"developer":55,"revisore":25,"editor":15}')[inputs.ruolo] }}
+        continue-on-error: true
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: bash "$CATENA/scripts/agente.sh" "${{ inputs.ruolo }}"
+
+      - name: Raccolta
+        if: always()
+        run: bash "$CATENA/scripts/raccolta.sh" "${{ inputs.ruolo }}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: esito
+          path: ${{ runner.temp }}/esito
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: log
+          path: ${{ runner.temp }}/catena-log
+          if-no-files-found: ignore
+          retention-days: 3
+
+  esito:
+    needs: agente
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: esito
+          path: ${{ runner.temp }}/esito
+
+      - name: Esito
+        run: bash "$CATENA/scripts/esito-${{ inputs.ruolo }}.sh"

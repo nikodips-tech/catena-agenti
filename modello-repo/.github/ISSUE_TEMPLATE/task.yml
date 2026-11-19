@@ -1,0 +1,43 @@
+name: Task
+description: Lavoro normale, verso develop. La catena parte quando il proprietario mette `auto`.
+labels: [task]
+body:
+  - type: textarea
+    id: contesto
+    attributes:
+      label: Contesto
+      description: Perché serve, per chi, cosa succede oggi.
+    validations:
+      required: true
+  - type: textarea
+    id: obiettivo
+    attributes:
+      label: Obiettivo
+      description: Cosa deve essere vero quando è finito, in una o due frasi.
+    validations:
+      required: true
+  - type: textarea
+    id: criteri
+    attributes:
+      label: Criteri di accettazione
+      description: Verificabili con test automatici, non con l'occhio.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: fuori
+    attributes:
+      label: Fuori ambito
+      description: Cosa non fa parte di questa issue.
+  - type: dropdown
+    id: corsia
+    attributes:
+      label: Corsia proposta
+      description: Diretta se la richiesta è chiusa, indivisibile, verificabile dalla CI e fuori dalle aree delicate. Decide il team leader.
+      options:
+        - lascio decidere al team leader
+        - diretta
+        - completa
+      default: 0

@@ -1,0 +1,34 @@
+# .catena.yml per un progetto PHP (Laravel + PHPUnit + Pint + PHPStan) nella radice del repo,
+# controlli in un'immagine con PHP e Composer, test con database su MySQL via compose.
+# Mostra che la catena non è legata allo stack: cambiano solo i comandi.
+
+ramo_sviluppo: develop
+ramo_produzione: master
+ci_nome: CI
+prefisso_task: feat
+prefisso_hotfix: fix
+
+cartella: .
+container: ghcr.io/esempio/php-ci:8.3
+container_rete: host
+container_opzioni: -e APP_ENV=testing -e DB_HOST=127.0.0.1
+installa: composer install --no-interaction --no-progress --prefer-dist --quiet
+installato_se: vendor
+lint: vendor/bin/pint --test
+tipi: vendor/bin/phpstan analyse --no-progress --error-format=raw
+test: vendor/bin/phpunit --testsuite=Unit --no-progress
+test_db: vendor/bin/phpunit --testsuite=Feature --no-progress
+db_avvia: docker compose -f docker-compose.ci.yaml up -d --wait db
+db_ferma: docker compose -f docker-compose.ci.yaml down -v
+formatta: vendor/bin/pint {file}
+formatta_file: \.php$
+filtro_errori: error|fail|FAILURES|Expected|Actual|\.php:[0-9]+
+
+file_test: (^|/)tests/.*Test\.php$
+file_e2e: (^|/)tests/Browser/|dusk
+file_protetti: ^config/|^\.env\.testing$
+docs: ^docs/|^README\.md$
+framework_test: PHPUnit
+
+modello_developer: sonnet
+turni_developer: 60

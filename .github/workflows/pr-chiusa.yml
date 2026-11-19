@@ -1,0 +1,66 @@
+# Pull request chiusa da una persona, riutilizzabile (workflow_call), niente Claude: ordine
+# sull'issue, ramo cancellato, coda.
+name: Catena pull request chiusa
+
+on:
+  workflow_call:
+    inputs:
+      pr:
+        type: string
+        required: true
+      ramo:
+        type: string
+        required: true
+      base:
+        type: string
+        required: true
+      unita:
+        description: "true se unita, false se chiusa senza unione"
+        type: string
+        required: true
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  pr-chiusa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      PR: ${{ inputs.pr }}
+      RAMO: ${{ inputs.ramo }}
+      BASE: ${{ inputs.base }}
+      UNITA: ${{ inputs.unita }}
+    steps:
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          sparse-checkout: .catena.yml
+          sparse-checkout-cone-mode: false
+
+      - run: bash "$CATENA/scripts/pr-chiusa.sh"

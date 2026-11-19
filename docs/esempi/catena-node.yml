@@ -1,0 +1,35 @@
+# .catena.yml per un progetto Node (Nuxt/Vue + Vitest + ESLint + Prettier) con l'app in app/,
+# controlli nello stesso container della CI (node:22-alpine). È la configurazione di cineNight.
+
+ramo_sviluppo: develop
+ramo_produzione: master
+ci_nome: CI
+prefisso_task: feat
+prefisso_hotfix: fix
+
+cartella: app
+container: node:22-alpine
+container_rete: host
+installa: npm ci --no-audit --no-fund --silent
+installato_se: node_modules
+lint: npm run -s lint -- --quiet && npm run -s format:check
+tipi: npm run -s typecheck
+test: npm test -s -- --reporter=dot
+# La CI di cineNight non esegue test:db: la catena nemmeno. Se un giorno li esegue:
+# test_db: npm run -s test:db
+# db_avvia: docker compose -f docker-compose.ci.yaml up -d --wait db
+# db_ferma: docker compose -f docker-compose.ci.yaml down -v
+formatta: npx prettier --write {file}
+formatta_file: \.(js|mjs|cjs|ts|vue|json|css|md)$
+formatta_codice: npx eslint --fix {file}
+formatta_codice_file: \.(js|mjs|cjs|ts|vue)$
+
+file_test: \.(test|spec)\.[^/]+$
+file_e2e: (^|/)(e2e|e2e-screenshots)/|playwright\.config|\.e2e\.
+docs: ^docs/|^README\.md$
+framework_test: Vitest
+
+staging_variabile: STAGING_AUTOMATICO
+staging_valore: si
+staging_workflow: staging.yml
+staging_avvio: -f azione=accendi

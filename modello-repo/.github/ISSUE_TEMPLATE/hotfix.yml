@@ -1,0 +1,26 @@
+name: Hotfix
+description: Correzione urgente della produzione. Parte da master; la PR verso master la unisce il proprietario.
+labels: [hotfix]
+body:
+  - type: textarea
+    id: sintomo
+    attributes:
+      label: Cosa succede in produzione
+      description: Sintomo, da quando, chi lo vede.
+    validations:
+      required: true
+  - type: textarea
+    id: atteso
+    attributes:
+      label: Cosa dovrebbe succedere
+    validations:
+      required: true
+  - type: textarea
+    id: criteri
+    attributes:
+      label: Criteri di accettazione
+      description: Verificabili con test automatici. Solo la correzione, niente altro; solo migrazioni additive.
+      value: |
+        - [ ]
+    validations:
+      required: true

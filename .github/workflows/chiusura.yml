@@ -1,0 +1,73 @@
+# Chiusura, riutilizzabile (workflow_call), niente Claude: la pull request dal ramo dell'issue
+# alla base, aperta con l'App `dipstech-agenti` (environment `agenti`) perché la CI parta da
+# sola. Il token dell'App non legge le issue: quelle si leggono con il token di Actions.
+name: Catena chiusura
+
+on:
+  workflow_call:
+    inputs:
+      issue:
+        type: string
+        required: true
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      AGENTI_APP_KEY:
+        required: true
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  chiusura:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: agenti
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      ISSUE: ${{ inputs.issue }}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.AGENTI_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTI_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+
+      - name: Pull request
+        env:
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+        run: bash "$CATENA/scripts/chiusura.sh"
+
+      - name: Se qualcosa non va
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE" --body "Catena, chiusura: non sono riuscito ad aprire la pull request. Esecuzione: $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID"
+          gh issue edit "$ISSUE" --remove-label in-corso --add-label bloccato

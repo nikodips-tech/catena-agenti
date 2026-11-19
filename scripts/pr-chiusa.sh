@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Una pull request della catena chiusa da una persona (unita a mano, o chiusa senza unione):
+# si fa ordine sull'issue, si cancella il ramo e si avvia la coda. Senza questo passo
+# `in-corso` resterebbe per sempre e la coda si fermerebbe.
+# Variabili: PR, RAMO, BASE, UNITA (true|false).
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
+issue=$(issue_da_ramo "$RAMO")
+
+if [ -n "$issue" ]; then
+  if [ "$UNITA" = true ]; then
+    ultimo=$(pf_issue_commenti "$issue" | jq -r 'last | .corpo // ""')
+    [[ "$ultimo" == "Unita in"* ]] || pf_commenta_testo "$issue" "Unita in \`$BASE\` dalla pull request #$PR."
+    [ "$(pf_issue_stato "$issue")" != OPEN ] || pf_issue_chiudi "$issue"
+    pf_ramo_cancella "$RAMO"
+  else
+    pf_commenta_testo "$issue" "La pull request #$PR è stata chiusa senza unione: la catena si ferma qui. Il ramo \`$RAMO\` resta; per ripartire rimetti \`$E_AUTO\`."
+  fi
+  pf_etichetta_togli "$issue" "$E_IN_CORSO,$E_DOMANDA"
+fi
+bash "$CATENA/scripts/coda.sh"

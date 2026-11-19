@@ -1,0 +1,84 @@
+# Unione, riutilizzabile (workflow_call), niente Claude: a CI finita, le pull request con
+# `unione-automatica` si uniscono (verde) o si riparano (rosso). Il merge lo fa l'App
+# `dipstech-agenti` (environment `agenti`): un merge col token di Actions non farebbe partire
+# release e staging.
+name: Catena unione
+
+on:
+  workflow_call:
+    inputs:
+      ramo:
+        type: string
+        required: true
+      sha:
+        type: string
+        required: true
+      esito:
+        description: Conclusione della CI (success, failure, cancelled, …)
+        type: string
+        required: true
+      run_id:
+        type: string
+        required: true
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      AGENTI_APP_KEY:
+        required: true
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  unione:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: agenti
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      actions: write
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      RAMO: ${{ inputs.ramo }}
+      SHA: ${{ inputs.sha }}
+      ESITO: ${{ inputs.esito }}
+      RUN_CI: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.AGENTI_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTI_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      # Solo la configurazione, dal ramo di sviluppo: mai il codice di una feature
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          sparse-checkout: .catena.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Unione
+        env:
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+        run: bash "$CATENA/scripts/unione.sh"

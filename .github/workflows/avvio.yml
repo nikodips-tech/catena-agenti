@@ -1,0 +1,89 @@
+# Avvio della catena, riutilizzabile (workflow_call), niente Claude: verifica il token della
+# App, poi scripts/avvio.sh (chi e cosa, coda, preflight, ripartenza dal punto giusto).
+name: Catena avvio
+
+on:
+  workflow_call:
+    inputs:
+      issue:
+        type: string
+        required: true
+      evento:
+        description: etichetta | commento | dispatch
+        type: string
+        required: true
+      chi:
+        description: Chi ha messo l'etichetta o scritto il commento
+        type: string
+        default: ""
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
+      AGENTI_APP_KEY:
+        required: false
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Il token della App si prova qui, nell'environment `agenti`: se non si ottiene, il
+  # preflight lo dice subito invece di scoprirlo alla chiusura
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: agenti
+    outputs:
+      ok: ${{ steps.app.outcome == 'success' && 'si' || 'no' }}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        continue-on-error: true
+        with:
+          client-id: ${{ vars.AGENTI_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTI_APP_KEY }}
+          permission-contents: read
+
+  avvio:
+    needs: app
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      actions: write
+      pull-requests: read
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      ISSUE: ${{ inputs.issue }}
+      EVENTO: ${{ inputs.evento }}
+      CHI: ${{ inputs.chi }}
+      PROPRIETARIO: ${{ github.repository_owner }}
+      CLAUDE_TOKEN_PRESENTE: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+      APP_OK: ${{ needs.app.outputs.ok }}
+    steps:
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+
+      - name: Avvio
+        run: bash "$CATENA/scripts/avvio.sh"

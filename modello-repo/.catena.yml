@@ -1,0 +1,38 @@
+# Configurazione della catena di agenti per questo progetto (docs/configurazione.md della
+# catena). File piatto: una chiave per riga. Lo cambia solo il proprietario.
+# I comandi devono essere GLI STESSI della CI, nello stesso container.
+
+ramo_sviluppo: develop
+ramo_produzione: master
+ci_nome: CI
+prefisso_task: feat
+prefisso_hotfix: fix
+
+cartella: app                        # dove stanno package.json & co. (. per la radice)
+container: node:22-alpine            # vuoto = direttamente sul runner
+container_rete: host
+installa: npm ci --no-audit --no-fund --silent
+installato_se: node_modules
+lint: npm run -s lint -- --quiet && npm run -s format:check
+tipi: npm run -s typecheck
+test: npm test -s -- --reporter=dot
+test_db:                             # vuoto se la CI non esegue test con database
+db_avvia:
+db_ferma:
+formatta: npx prettier --write {file}
+formatta_file: \.(js|mjs|cjs|ts|vue|json|css|md)$
+formatta_codice: npx eslint --fix {file}
+formatta_codice_file: \.(js|mjs|cjs|ts|vue)$
+
+file_test: \.(test|spec)\.[^/]+$
+file_e2e: (^|/)(e2e|e2e-screenshots)/|playwright\.config|\.e2e\.
+file_protetti:
+docs: ^docs/|^README\.md$
+framework_test: Vitest
+
+guardiano_minuti: 90
+
+staging_variabile:                   # es. STAGING_AUTOMATICO; vuoto se il progetto non ha staging
+staging_valore: si
+staging_workflow:
+staging_avvio:
