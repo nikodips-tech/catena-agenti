@@ -112,4 +112,12 @@ pf_environment_rami() { gh api "repos/$GH_REPO/environments/$1/deployment-branch
 # true se il repository ha l'auto-merge abilitato. Il campo lo vedono solo gli amministratori:
 # con il token di Actions risponde vuoto, quindi serve all'installazione, non al preflight
 pf_auto_merge() { gh api "repos/$GH_REPO" --jq '.allow_auto_merge // empty' 2> /dev/null || true; }
-pf_variabile() { gh variable get "$1" 2> /dev/null || true; }
+# pf_variabile <nome>: il valore o vuoto. Nei workflow da VARIABILI (toJSON(vars)): il token di
+# Actions non ha il permesso di leggere le variabili con l'API e le troverebbe tutte vuote
+pf_variabile() {
+  if [ -n "${VARIABILI:-}" ]; then
+    jq -r --arg n "$1" '.[$n] // empty' <<< "$VARIABILI"
+  else
+    gh variable get "$1" 2> /dev/null || true
+  fi
+}
