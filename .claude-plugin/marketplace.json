@@ -1,0 +1,12 @@
+{
+  "name": "catena-agenti",
+  "owner": { "name": "Nicola Di Pietro" },
+  "description": "Il marketplace della catena di agenti: il plugin guardia, che protegge le sessioni di Claude Code.",
+  "plugins": [
+    {
+      "name": "guardia",
+      "source": "./plugin",
+      "description": "Hook che blocca force push, push su master o di tag, merge in master dei repo di produzione, modifiche a ruleset ed environment, ssh e docker compose down che cancella dati."
+    }
+  ]
+}

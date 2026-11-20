@@ -13,6 +13,7 @@ workflow e un file di configurazione.
 | La CI dei progetti | [docs/ci.md](docs/ci.md) |
 | Portarla su un'altra piattaforma | [docs/portabilita.md](docs/portabilita.md) |
 | Farla girare in una sessione di Claude Code | [docs/locale.md](docs/locale.md) |
+| Proteggere le sessioni di Claude Code (hook) | [docs/guardia.md](docs/guardia.md) |
 | Scrivere issue buone | [agenti/product-owner.md](agenti/product-owner.md), [docs/esempi/issue-task.md](docs/esempi/issue-task.md) |
 
 ## Struttura
@@ -28,6 +29,7 @@ modello-repo/           cosa va in ogni progetto: catena.yml, ci.yml, .catena.ym
                         product owner, skill /catena e agenti sottili per la sessione locale
 docs/                   specifica, corsie, flusso, permessi, configurazione, CI, portabilità, esempi
 prompt/                 i prompt per migrare o aggiornare un progetto con Claude Code
+plugin/                 il plugin guardia di Claude Code: hook contro push, merge e comandi pericolosi
 ```
 
 ## Versioni
