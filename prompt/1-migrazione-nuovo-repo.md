@@ -18,7 +18,8 @@ Prepara per te un quadro breve, che finirà nel resoconto.
   `anthropics/claude-code-action` o `CLAUDE_CODE_OAUTH_TOKEN`.
 - Altri file in `.github/` (script, CODEOWNERS, configurazioni) e da quali workflow sono usati.
 - Stack e comandi: lint, formattazione, tipi, test unitari, test con database, build; se il
-  progetto gira in container, come li lancia la CI. Il framework di test.
+  progetto gira in container, come li lancia la CI. Il framework di test. I controlli della
+  CI che non rientrano in questi (vanno nel resoconto come proposta, `regole-sessione.md`).
 - Dove stanno i test e dove gli e2e, se esistono (servono per `file_test` e `file_e2e`).
 - Dove sta la documentazione (`docs/`, `README.md`): servirà all'editor e al product owner.
 

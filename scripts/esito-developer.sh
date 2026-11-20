@@ -26,7 +26,18 @@ bloccato() {
 
 ramo_checkout "$ramo" "$base"
 git_identita
+# La raccolta gira nel job di Claude e legge file che Claude può scrivere: qui, con il
+# token, i test della base modificabili si ricalcolano dall'issue e la patch si controlla
+if [ "$diretto" = 1 ]; then autorizzati=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA"); else autorizzati=$(pf_issue_corpo "$SOTTOTASK"); fi
+{ test_modificabili "$autorizzati"
+  git diff --diff-filter=M --name-only --no-renames "origin/$base...HEAD" | grep -P "$RE_TEST" || true
+} | sort -u > "$TMP_BASE/permessi.txt"
 if [ -s "$ESITO_DIR/patch.diff" ]; then git apply --index "$ESITO_DIR/patch.diff"; fi
+vietati=$(file_vietati "$base" "$TMP_BASE/permessi.txt")
+if [ -n "$vietati" ]; then
+  git reset -q --hard
+  bloccato "patch scartata: tocca file che la raccolta avrebbe dovuto rimettere com'erano (file protetti, e2e o test della base senza permesso). Va guardato il job agente:"$'\n\n```\n'"$vietati"$'\n```'
+fi
 
 if [ "$stato" != ok ]; then
   { printf 'Tentativo %s di %s fallito: %s (%s)\n' "$TENTATIVO" "$MAX_TENTATIVI" "$motivo" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$SOTTOTASK" -

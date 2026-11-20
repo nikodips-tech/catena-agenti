@@ -44,6 +44,10 @@ Fermati, scrivi il motivo e cosa servirebbe, senza improvvisare, se:
 - Cosa hai cancellato e cosa hai tenuto tra i casi dubbi.
 - Controlli obbligatori finali di develop e master.
 - I comandi di `.catena.yml` (lint, tipi, test, test con database) e il container.
+- Controlli propri del progetto: quelli della CI che non sono tra quelli della catena (lint,
+  tipi, test, test con database, build, migrazioni distruttive, test indeboliti), con cosa
+  fanno e se andrebbero generalizzati. Solo una proposta da discutere con l'utente: non
+  aggiungerli a `.catena.yml`.
 - Stato dello staging (acceso e verde, rosso con errore, assente).
 - Adattamenti fatti rispetto al modello.
 - Cose strane trovate e non toccate (documentazione vecchia, commenti).

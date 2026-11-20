@@ -19,6 +19,8 @@ Da eseguire in una sessione aperta nella cartella del repository. Leggi prima
   Per ogni script in `.github/scripts/` verifica con `grep` **chi lo usa**: `progetto.sh`,
   `migrazioni-distruttive.sh`, `test-indeboliti.sh` li usano CI e release e **restano**.
 - `CLAUDE.md`, `CODEOWNERS`, `.github/progetto.yml`.
+- I controlli della CI che non sono tra quelli della catena (vanno nel resoconto come
+  proposta, `regole-sessione.md`).
 - Etichette, ruleset e controlli obbligatori, variabili (`STAGING_AUTOMATICO`), environment
   `agenti`, PR aperte, issue con `in-corso`, `auto`, `domanda` o `bloccato`.
 - Se una issue è `in-corso` o ha una PR `issue-*` aperta: **fermati e riferisci**. La catena
