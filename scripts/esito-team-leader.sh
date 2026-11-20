@@ -72,7 +72,8 @@ if [ -z "${SOTTOTASK:-}" ]; then
     pf_passo_avvia developer "$ISSUE" "$ISSUE" 1
     exit 0
   fi
-  prima=$(crea_sottotask "$f" '.sottotask' | head -1)
+  # Su file e non in pipe con head: con pipefail il secondo echo darebbe "Broken pipe"
+  crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$TMP_BASE/sottotask.txt")
   pf_commenta_testo "$ISSUE" "Specifica pronta. Parte il primo sotto-task (#$prima)."
   pf_passo_avvia developer "$ISSUE" "$prima" 1
   exit 0
@@ -103,7 +104,7 @@ fi
 # riformula: il sotto-task si chiude, al suo posto quelli nuovi
 pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
 pf_issue_chiudi "$SOTTOTASK" "Riformulato dal team leader in sotto-task più piccoli."
-prima=$(crea_sottotask "$f" '.sottotask' | head -1)
+crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$TMP_BASE/sottotask.txt")
 # In corsia diretta la riformulazione porta nella corsia completa: lo dice una nuova specifica
 specifica=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA")
 if [ "$(corsia_di "$specifica")" = diretta ]; then

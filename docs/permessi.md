@@ -90,5 +90,6 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | Molti token del developer | output completo dei controlli | riassunto corto, log su file |
 | In coda per minuti senza job | rallentamento di GitHub | il guardiano riparte; le annullate non scrivono |
 | Passo in errore su `--remove-label` | etichetta cancellata | `pf_etichetta_togli` ignora l'assenza, il preflight le crea |
+| Team leader in errore "Broken pipe" con più sotto-task | `crea_sottotask … \| head -1` con pipefail | i numeri su file, poi `head` |
 | Catena non trovata al checkout | repo della catena privato | pubblico, oppure `CATENA_TOKEN` |
 | Chiamata al workflow riutilizzabile rifiutata | accesso ai workflow del repo della catena | repo pubblico, oppure Settings → Actions → Access |
