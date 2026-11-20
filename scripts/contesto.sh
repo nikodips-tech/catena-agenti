@@ -52,8 +52,11 @@ case "$ruolo" in
         git diff "origin/$BASE...origin/$RAMO" | limita 150000 > "$CONTESTO/lavoro.diff"
         descrivi lavoro.diff "tutto il lavoro sul ramo $RAMO rispetto a $BASE, compresi i test del sotto-task e i tentativi del developer (commit wip:)"
       fi
-      { echo "Il sotto-task #$SOTTOTASK è fallito $MAX_TENTATIVI volte. Sei chiamato in escalation: decidi se il test è sbagliato,"
+      { echo "Il sotto-task #$SOTTOTASK è fallito. Sei chiamato in escalation: decidi se il test è sbagliato,"
         echo "se il sotto-task va riformulato in pezzi più piccoli o se serve davvero una persona (docs/specifica.md, Escalation)."
+        echo "Se l'errore dice che sono stati ripristinati test della base, l'escalation è arrivata subito: il developer"
+        echo "li ha modificati senza permesso. Se il sotto-task richiede davvero di cambiarli, riformula indicandoli in"
+        echo "test_modificabili; se non serve, riformula spiegando nella descrizione che vanno lasciati com'erano."
       } > "$CONTESTO/escalation.md"
       descrivi escalation.md "perché sei stato chiamato"
     fi ;;
@@ -69,7 +72,15 @@ case "$ruolo" in
     fi
     # I test già presenti nella base non si toccano: l'elenco di quelli che il ramo ha aggiunto
     git diff --diff-filter=A --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-del-ramo.txt" || true
-    descrivi test-del-ramo.txt "i file di test aggiunti su questo ramo dai sotto-task precedenti (puoi modificarli); i test che esistono già in $BASE non si toccano"
+    descrivi test-del-ramo.txt "i file di test aggiunti su questo ramo dai sotto-task precedenti (puoi modificarli)"
+    # I test della base modificabili: quelli che il team leader autorizza nel sotto-task (in
+    # corsia diretta e nelle riparazioni, nella specifica) e quelli già modificati sul ramo,
+    # che la raccolta di un passo precedente ha lasciato passare. raccolta.sh legge questo file
+    if [ "$SOTTOTASK" = "$ISSUE" ]; then autorizzati=$(cat "$CONTESTO/specifica.md"); else autorizzati=$(cat "$CONTESTO/sottotask.md"); fi
+    { test_modificabili "$autorizzati"
+      git diff --diff-filter=M --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" || true
+    } | sort -u > "$CONTESTO/test-modificabili.txt"
+    descrivi test-modificabili.txt "i test che esistono già in $BASE e che puoi modificare (non cancellare); tutti gli altri test di $BASE non si toccano"
     nota_md errore.txt "le ultime righe dell'errore del tentativo precedente, o i controlli falliti della CI da riparare"
     wip=$(git log --format=%s "origin/$BASE..HEAD" 2> /dev/null | grep -E "^wip: #$SOTTOTASK " | head -1 || true)
     if [ -n "$wip" ]; then
@@ -80,6 +91,8 @@ case "$ruolo" in
     specifica; differenze
     git diff --diff-filter=A --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-developer.txt" || true
     descrivi test-developer.txt "i file di test aggiunti sul ramo dal developer (vuoto se nessuno)"
+    git diff --diff-filter=M --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-modificati.txt" || true
+    descrivi test-modificati.txt "i test che esistono già in $BASE e che il developer ha modificato con il permesso del team leader (vuoto se nessuno): controlla che non siano stati indeboliti"
     pf_issue_commenti "$ISSUE" | jq -r '[.[] | select(.corpo | startswith("## Revisione")) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/revisioni-precedenti.md"
     descrivi revisioni-precedenti.md "le tue revisioni precedenti su questa issue (vuoto al primo giro): non ripetere richieste già fatte" ;;
   editor)

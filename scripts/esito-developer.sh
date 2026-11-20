@@ -5,7 +5,7 @@
 #   revisione, oppure chiusura in corsia diretta e nelle riparazioni).
 # - Controlli rossi: il lavoro parziale resta sul ramo come "wip: #<n> tentativo k", così il
 #   tentativo dopo corregge invece di rifare. Al terzo fallimento escalation al team leader
-#   (una volta), poi `bloccato`.
+#   (una volta), poi `bloccato`. Subito, se la raccolta ha ripristinato test della base.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 stato=$(cat "$ESITO_DIR/stato" 2> /dev/null || echo mancante)
@@ -36,16 +36,20 @@ if [ "$stato" != ok ]; then
     pf_push "$ramo"
   fi
   printf '%s' "$messaggio" > "$TMP_BASE/nota.txt"
-  if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ]; then
+  # Rosso con test della base ripristinati: il tentativo dopo rifarebbe la stessa modifica,
+  # quindi si salta subito al team leader, che può autorizzarla (test_modificabili)
+  ripristinati=$(paste -sd, "$ESITO_DIR/test-ripristinati.txt" 2> /dev/null || true)
+  if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ] && [ -z "$ripristinati" ]; then
     pf_passo_avvia developer "$ISSUE" "$SOTTOTASK" "$((TENTATIVO + 1))" "$TMP_BASE/nota.txt"
     exit 0
   fi
+  if [ -n "$ripristinati" ]; then perche="ha modificato test della base senza permesso ($ripristinati)"; else perche="è fallito $MAX_TENTATIVI volte"; fi
   if [ "$(conta_commenti "$SOTTOTASK" "$T_ESCALATION")" -lt "$MAX_ESCALATION" ]; then
-    pf_commenta_testo "$ISSUE" "Il sotto-task #$SOTTOTASK è fallito $MAX_TENTATIVI volte: chiedo al team leader (escalation)."
+    pf_commenta_testo "$ISSUE" "Il sotto-task #$SOTTOTASK $perche: chiedo al team leader (escalation)."
     pf_passo_avvia team-leader "$ISSUE" "$SOTTOTASK" 1 "$TMP_BASE/nota.txt"
     exit 0
   fi
-  bloccato "fallito $MAX_TENTATIVI volte anche dopo l'escalation. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
+  bloccato "$perche anche dopo l'escalation. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
 fi
 
 # Verde: un solo commit che assorbe i tentativi precedenti

@@ -86,7 +86,7 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | Commit assente dalla release | titolo squash senza `feat:`/`fix:` | prefisso da `titolo_squash` |
 | "Il developer non ha prodotto un risultato" | `bash -e` chiudeva il passo prima dello stato | controlli dentro `if …; then` |
 | Tre fallimenti su `format:check` | file scritti dall'agente non formattati | formattazione di tutto il ramo prima dei controlli |
-| "ha toccato file di test" | file di prova del developer | test del ramo suoi, test della base ripristinati |
+| "ha toccato file di test" | file di prova del developer | test del ramo suoi, test della base ripristinati salvo quelli in `test_modificabili` |
 | Molti token del developer | output completo dei controlli | riassunto corto, log su file |
 | In coda per minuti senza job | rallentamento di GitHub | il guardiano riparte; le annullate non scrivono |
 | Passo in errore su `--remove-label` | etichetta cancellata | `pf_etichetta_togli` ignora l'assenza, il preflight le crea |

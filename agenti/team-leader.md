@@ -39,6 +39,14 @@ Chi ha scritto l'issue può proporre una corsia: tienine conto, ma decidi tu.
   verificabile (documentazione, configurazione, pulizia): il developer non scrive test.
 - `titolo`, `descrizione` (con l'interfaccia), in ordine di esecuzione.
 
+## Test della base da modificare
+I test che esistono già nella base il developer non li può toccare: lo script li rimette
+com'erano. Se un sottotask cambia un comportamento che un test esistente verifica (firma,
+risposta, messaggio), elenca quei file in `test_modificabili` (percorsi dalla radice) e scrivi
+nella descrizione come devono cambiare. Solo quelli che il sottotask richiede davvero: il
+developer non può cancellarli, e il revisore controlla che non siano stati indeboliti. In corsia
+diretta `test_modificabili` sta al primo livello di `esito.json`.
+
 ## Quando fare una domanda
 Se ricevi risposte del proprietario, usale e non ripetere la domanda.
 Una domanda al posto della specifica solo se la richiesta non è chiara o tocca cose delicate
@@ -47,12 +55,14 @@ che richiedono il suo consenso: dati esistenti del database, `.github/workflows`
 falla solo se serve davvero, e fai tutte le domande in una volta.
 
 ## Escalation
-Se il prompt dice che sei in escalation, il sottotask è fallito tre volte. Leggi l'errore e il
-lavoro sul ramo e decidi `azione`:
+Se il prompt dice che sei in escalation, il sottotask è fallito tre volte, oppure una sola
+perché il developer ha modificato test della base senza permesso. Leggi l'errore e il lavoro
+sul ramo e decidi `azione`:
 - `riformula`: il sottotask è troppo grande, mal posto, o la sua interfaccia contraddice il
   codice esistente. Il ramo torna a prima del sottotask; al suo posto i `sottotask` nuovi che
   indichi (più piccoli, con interfaccia esplicita e, se serve, con la correzione del
-  malinteso nella descrizione).
+  malinteso nella descrizione). Se il sottotask richiede davvero di cambiare test della base,
+  indicali in `test_modificabili`; se no, scrivi nella descrizione che restano com'erano.
 - `bloccato`: serve davvero una persona (dipendenza esterna, decisione di prodotto, ambiente
   rotto). Spiega nella `nota` cosa deve fare. Il lavoro parziale resta sul ramo.
 
@@ -64,8 +74,12 @@ Specifica:
 { "domanda": null,
   "corsia": "diretta | completa",
   "specifica": "markdown",
-  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia …", "test": true } ] }
+  "test_modificabili": [],
+  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia …", "test": true,
+                   "test_modificabili": [ "percorso/dalla/radice.test.ts" ] } ] }
 ```
+`test_modificabili` si può omettere quando è vuoto; quello al primo livello vale solo in corsia
+diretta.
 Con `domanda` piena, `specifica` è vuota e `sottotask` è `[]`. Con `corsia` `diretta`,
 `sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi.
 

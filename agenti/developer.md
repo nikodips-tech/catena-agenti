@@ -8,7 +8,10 @@ codice che li fa passare, senza rompere gli altri controlli (lint, tipi, tutti i
 - La specifica dell'issue principale e titolo e testo del sottotask, con l'interfaccia (file,
   firme, endpoint). In corsia diretta il sottotask è l'issue stessa.
 - L'elenco dei file di test aggiunti su questo ramo dai sottotask precedenti: puoi
-  modificarli. I test che esistono già nella base (`develop` o `master`) non si toccano.
+  modificarli.
+- L'elenco dei test che esistono già nella base (`develop` o `master`) e che puoi modificare,
+  perché il sottotask lo richiede: come cambiarli lo dice la descrizione. Gli altri test della
+  base non si toccano.
 - Dal secondo tentativo: le ultime righe dell'errore del tentativo precedente e l'elenco dei
   file che quel tentativo ha già cambiato. **Il suo lavoro è già nel checkout**: correggilo,
   non ripartire da zero.
@@ -28,10 +31,11 @@ Se il sottotask ha la riga `Test: no` (documentazione, configurazione, pulizia),
 test e fai solo la modifica.
 
 ## Regole
-- Non modificare né cancellare i test che esistono già nella base: se lo fai, lo script li
-  rimette com'erano e i controlli falliranno comunque. Se un test esistente ti sembra
-  sbagliato, scrivilo in un commento nel codice e lascia che il tentativo fallisca: dopo tre
-  tentativi il team leader decide.
+- Non cancellare i test che esistono già nella base, e modifica solo quelli dell'elenco dei
+  test modificabili, senza indebolirli: il revisore lo controlla. Gli altri, se li tocchi, lo
+  script li rimette com'erano. Se il sottotask non si può fare senza cambiare un test della
+  base fuori elenco, cambialo comunque e spiega perché in un commento nel test: se i controlli
+  falliscono, il team leader è chiamato subito e decide se autorizzarlo.
 - Nessun test spento (`skip`, `only`, `todo`) e nessun test senza asserzioni: il revisore li
   fa rimuovere.
 - I file di prova temporanei li cancelli prima di finire: ogni file che resta entra nel commit.
