@@ -44,6 +44,11 @@ if [ "$stato" != ok ]; then
     exit 0
   fi
   if [ -n "$ripristinati" ]; then perche="ha modificato test della base senza permesso ($ripristinati)"; else perche="è fallito $MAX_TENTATIVI volte"; fi
+  # Riparazione di una CI rossa: niente escalation (riformulare a PR aperta riscriverebbe il
+  # ramo), una sola riparazione e poi `bloccato` (docs/specifica.md, Scala di escalation)
+  if [ "$diretto" = 1 ] && [ "$(conta_commenti "$ISSUE" "$T_RIPARAZIONE")" -gt 0 ]; then
+    bloccato "la riparazione della CI rossa $perche. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
+  fi
   if [ "$(conta_commenti "$SOTTOTASK" "$T_ESCALATION")" -lt "$MAX_ESCALATION" ]; then
     pf_commenta_testo "$ISSUE" "Il sotto-task #$SOTTOTASK $perche: chiedo al team leader (escalation)."
     pf_passo_avvia team-leader "$ISSUE" "$SOTTOTASK" 1 "$TMP_BASE/nota.txt"

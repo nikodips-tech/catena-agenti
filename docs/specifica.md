@@ -112,7 +112,7 @@ estranei`, `docs: #<issue>`.
 | Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `bloccato` |
 | Revisore oltre 2 giri | riserve: PR senza unione automatica, `domanda` |
 | Editor fuori da docs | scartato, si prosegue |
-| CI rossa dopo la PR | una riparazione del developer, poi `bloccato` |
+| CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `bloccato` |
 | Preflight fallito | `bloccato` con l'elenco esatto |
 | Workflow morto (timeout, GitHub) | il guardiano riparte dal punto giusto |
 | Domanda del team leader | la risposta del proprietario riavvia |
