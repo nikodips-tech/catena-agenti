@@ -25,6 +25,11 @@ formatta_file: \.(js|mjs|cjs|ts|vue|json|css|md)$
 formatta_codice: npx eslint --fix {file}
 formatta_codice_file: \.(js|mjs|cjs|ts|vue)$
 
+# CI condivisa (docs/ci.md): l'immagine da costruire e le migrazioni SQL
+dockerfile: app/Dockerfile           # vuoto se il progetto non ha immagini
+immagini:                            # più immagini: <servizio>=<dockerfile> separate da spazi
+migrazioni:                          # cartella delle migrazioni SQL, vuoto se non ce ne sono
+
 file_test: \.(test|spec)\.[^/]+$
 file_e2e: (^|/)(e2e|e2e-screenshots)/|playwright\.config|\.e2e\.
 file_protetti:

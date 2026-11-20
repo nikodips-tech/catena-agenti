@@ -67,5 +67,6 @@ come su GitHub.
 
 ## Cosa non è portabile per scelta
 
-- `docs/esempi/ci-minima.yml` e i ruleset: sono esempi GitHub.
+- La CI condivisa (`.github/workflows/ci.yml`) e i ruleset: sono GitHub. Gli script in
+  `scripts/ci/` invece no.
 - Il modello di repo contiene `.github/`; per un'altra piattaforma avrà la sua cartella.

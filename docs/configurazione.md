@@ -59,6 +59,16 @@ runner. Devono essere **gli stessi della CI**.
 | `turni_<ruolo>` | vedi specifica | turni massimi per ruolo |
 | `guardiano_minuti` | `90` | fermo oltre il quale il guardiano riparte |
 
+## CI (docs/ci.md)
+
+| Chiave | Esempio | Significato |
+|---|---|---|
+| `dockerfile` | `app/Dockerfile` | l'immagine che la CI deve saper costruire (check `build <cartella>`); vuoto se il progetto non ha immagini |
+| `immagini` | `app=app/Dockerfile worker=worker/Dockerfile` | più immagini, `<servizio>=<dockerfile>`; se c'è vale al posto di `dockerfile` |
+| `migrazioni` | `app/server/db/migrations` | cartella delle migrazioni SQL, per le istruzioni distruttive; vuoto se non ce ne sono |
+
+lint, tipi, test e test con database usano i comandi di «Comandi dei controlli».
+
 ## Staging
 
 | Chiave | Esempio | Significato |

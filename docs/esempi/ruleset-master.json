@@ -24,11 +24,11 @@
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "lint" },
-          { "context": "tipi" },
-          { "context": "test" },
-          { "context": "build app" },
-          { "context": "migrazioni" }
+          { "context": "ci / lint" },
+          { "context": "ci / tipi" },
+          { "context": "ci / test" },
+          { "context": "ci / build app" },
+          { "context": "ci / migrazioni" }
         ]
       }
     }
