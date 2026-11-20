@@ -27,6 +27,8 @@ esac
 ! ha "$etichette" "$E_SOTTOTASK" || rifiuta "\`auto\` va messa sull'issue principale, non su un sotto-task."
 [ -n "$tipo" ] || rifiuta "La catena gestisce solo issue con etichetta \`$E_TASK\` o \`$E_HOTFIX\`."
 [ "$(pf_issue_stato "$ISSUE")" = OPEN ] || exit 0
+# Già unita e in attesa del rilascio (chiudi_issue: produzione): la catena ha finito
+! ha "$etichette" "$E_IN_DEVELOP" || rifiuta "L'issue è già in develop e si chiude con il rilascio. Per una correzione apri una issue nuova."
 
 # Già in corso: un secondo avvio (coda e pr-chiusa insieme, `auto` rimessa per sbaglio) non fa
 # niente. Il guardiano toglie `in-corso` prima di chiamare l'avvio, così la ripresa passa.

@@ -7,6 +7,7 @@ ramo_produzione: master
 ci_nome: CI
 prefisso_task: feat
 prefisso_hotfix: fix
+chiudi_issue: unione                 # unione | produzione (aperta con in-develop fino al rilascio)
 
 cartella: app                        # dove stanno package.json & co. (. per la radice)
 container: node:22-alpine            # vuoto = direttamente sul runner

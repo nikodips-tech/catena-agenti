@@ -22,7 +22,7 @@ pr=$(pf_pr_aperta "$ramo" "$base" | jq -r '.numero // empty')
 if [ -z "$pr" ]; then
   titolo=$(pf_issue_titolo "$ISSUE")
   sotto=$(pf_sottoissue "$ISSUE" | jq -r '.[] | "- #\(.numero) \(.titolo)"')
-  { printf 'Closes #%s\n\nCorsia: %s\nRevisione: %s\n' "$ISSUE" "$corsia" "$revisione"
+  { printf '%s\n\nCorsia: %s\nRevisione: %s\n' "$(riferimento_issue "$ISSUE" "$base")" "$corsia" "$revisione"
     [ -z "$sotto" ] || printf '\nSotto-task:\n\n%s\n' "$sotto"
     printf '\nAperta dalla catena di agenti.\n'; } > "$TMP_BASE/corpo.md"
   pr=$(pf_pr_apri "$ramo" "$base" "$titolo" "$TMP_BASE/corpo.md")

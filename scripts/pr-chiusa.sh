@@ -9,9 +9,9 @@ issue=$(issue_da_ramo "$RAMO")
 
 if [ -n "$issue" ]; then
   if [ "$UNITA" = true ]; then
+    # Unita dall'unione automatica: ha già fatto lei. Unita a mano: come l'unione
     ultimo=$(pf_issue_commenti "$issue" | jq -r 'last | .corpo // ""')
-    [[ "$ultimo" == "Unita in"* ]] || pf_commenta_testo "$issue" "Unita in \`$BASE\` dalla pull request #$PR."
-    [ "$(pf_issue_stato "$issue")" != OPEN ] || pf_issue_chiudi "$issue"
+    [[ "$ultimo" == "Unita in"* ]] || issue_unita "$issue" "$BASE" "Unita in \`$BASE\` dalla pull request #$PR."
     pf_ramo_cancella "$RAMO"
   else
     pf_commenta_testo "$issue" "La pull request #$PR è stata chiusa senza unione: la catena si ferma qui. Il ramo \`$RAMO\` resta; per ripartire rimetti \`$E_AUTO\`."

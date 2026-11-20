@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Unione (niente Claude): quando la CI finisce su un ramo con una pull request aperta che ha
-# `unione-automatica`, verde → squash con il prefisso giusto, ramo cancellato, issue chiusa;
+# `unione-automatica`, verde → squash con il prefisso giusto, ramo cancellato, issue chiusa
+# (o `in-develop` fino al rilascio, con chiudi_issue: produzione);
 # rossa → una riparazione del developer (una volta), poi `bloccato`. Vale per le PR della
 # catena (rami issue-*) e per quelle aperte in corsia diretta da una sessione locale, se hanno
 # l'etichetta. Alla fine avvia la coda.
@@ -34,7 +35,9 @@ bloccato() {
 if [ "$ESITO" = success ]; then
   titolo=$(pf_pr_json "$numero" | jq -r .titolo)
   soggetto=$(titolo_squash "$titolo" "$tipo" "$issue")
-  if pf_pr_unisci "$numero" "$soggetto"; then
+  # Il riferimento all'issue nel messaggio dello squash: lo cerca il rilascio per chiuderla
+  corpo=""; [ -z "$issue" ] || corpo=$(riferimento_issue "$issue" "$base")
+  if pf_pr_unisci "$numero" "$soggetto" "$corpo"; then
     dove="Unita in \`$base\`"
     variabile=$(cfg staging_variabile); workflow_staging=$(cfg staging_workflow)
     if [ -n "$variabile" ] && [ "$base" = "$RAMO_SVILUPPO" ]; then
@@ -45,11 +48,7 @@ if [ "$ESITO" = success ]; then
         pf_workflow_avvia "$workflow_staging" --ref "$RAMO_SVILUPPO" $(cfg staging_avvio) && dove+=": parte lo staging"
       fi
     fi
-    if [ -n "$issue" ]; then
-      [ "$(pf_issue_stato "$issue")" != OPEN ] || pf_issue_chiudi "$issue"
-      pf_commenta_testo "$issue" "$dove."
-      pf_etichetta_togli "$issue" "$E_IN_CORSO,$E_DOMANDA"
-    fi
+    [ -z "$issue" ] || issue_unita "$issue" "$base" "$dove."
   else
     bloccato "i controlli sono verdi ma non riesco a unire la pull request #$numero."
   fi
