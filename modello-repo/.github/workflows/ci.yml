@@ -1,0 +1,21 @@
+# La CI del progetto: quella condivisa della catena (docs/ci.md di nikodips-tech/catena-agenti),
+# con comandi, container e immagini di .catena.yml. Qui solo ciò che è del progetto (es. e2e).
+# I check per il ruleset: ci / cambi, lint, tipi, test, test-db, build <servizio>, migrazioni.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un commit nuovo sulla pull request ferma la CI di quello prima: conta solo l'ultimo
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: nikodips-tech/catena-agenti/.github/workflows/ci.yml@v1

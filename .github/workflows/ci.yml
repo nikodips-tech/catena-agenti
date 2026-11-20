@@ -1,0 +1,142 @@
+# La CI dei progetti, riutilizzabile (workflow_call): la chiama il wrapper ci.yml di ogni
+# progetto (modello-repo/.github/workflows/ci.yml). Comandi, container e immagini vengono da
+# .catena.yml, e i controlli girano con lo stesso controlli.sh del developer della catena:
+# CI e catena giudicano allo stesso modo per costruzione (docs/ci.md).
+#
+# I nomi dei check, per il ruleset, sono fissi: <job del wrapper> / cambi, lint, tipi, test,
+# test-db, build <servizio>, migrazioni. Con sola documentazione i passi si saltano (non i
+# job: un job saltato non dà il nome del check) e i controlli finiscono verdi.
+#
+# Gira il codice della pull request: niente segreti e token in sola lettura.
+name: Catena CI
+
+on:
+  workflow_call:
+    inputs:
+      catena_repo:
+        description: Repository della catena da cui leggere gli script
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      CATENA_TOKEN:
+        description: Solo se il repository della catena è privato
+        required: false
+    outputs:
+      codice:
+        description: si | no (no se la PR cambia solo documentazione), per i job del progetto
+        value: ${{ jobs.cambi.outputs.codice }}
+
+permissions:
+  contents: read
+
+env:
+  CATENA: ${{ github.workspace }}/catena
+  REPO_DIR: ${{ github.workspace }}/repo
+  DOCKER_BUILD_RECORD_UPLOAD: false   # niente artifact .dockerbuild
+
+jobs:
+  cambi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      codice: ${{ steps.c.outputs.codice }}
+      immagini: ${{ steps.c.outputs.immagini }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+          persist-credentials: false
+      - id: c
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: bash "$CATENA/scripts/ci/cambi.sh"
+
+  controlli:
+    needs: cambi
+    name: ${{ matrix.controllo }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        controllo: [lint, tipi, test, test-db]
+    env:
+      CODICE: ${{ needs.cambi.outputs.codice }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.CODICE == 'si'
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.CODICE == 'si'
+        with:
+          path: repo
+          persist-credentials: false
+      - name: ${{ matrix.controllo }}
+        if: env.CODICE == 'si'
+        run: bash "$CATENA/scripts/ci/controllo.sh" "${{ matrix.controllo }}"
+
+  build:
+    needs: cambi
+    if: needs.cambi.outputs.immagini != '[]'
+    name: build ${{ matrix.servizio }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.cambi.outputs.immagini) }}
+    env:
+      CODICE: ${{ needs.cambi.outputs.codice }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.CODICE == 'si'
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: env.CODICE == 'si'
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        if: env.CODICE == 'si'
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          load: true
+          tags: ci-${{ matrix.servizio }}:ci   # solo in locale: la build deve riuscire
+          cache-from: type=gha,scope=${{ matrix.servizio }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.servizio }}
+
+  # Migrazioni distruttive (in un hotfix bloccano) e test indeboliti (spenti: bloccano)
+  migrazioni:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Migrazioni e test indeboliti
+        env:
+          BASE: ${{ github.base_ref || 'develop' }}
+          RAMO: ${{ github.head_ref || github.ref_name }}
+        run: bash "$CATENA/scripts/ci/migrazioni.sh"

@@ -72,11 +72,13 @@ orchestratori.
 **CI**:
 - Il job `e2e`, se esiste, parte solo con `workflow_dispatch` e un input `e2e` (predefinito
   no). Nessun altro job dipende da lui. I test e2e restano nel repo.
-- Se il repo non ha una CI sulle PR, creala da `<CARTELLA>/docs/esempi/ci-minima.yml`: job
-  separati per lint, tipi, test, build (solo quelli che hanno senso per lo stack), nello stesso
-  container del progetto, nomi dei job semplici (`lint`, `tipi`, `test`, `build app`). Il
-  `name:` del workflow è `CI`.
-- I job che saranno obbligatori girano anche con `workflow_dispatch`.
+- La CI è quella condivisa della catena (`<CARTELLA>/docs/ci.md`): `.github/workflows/ci.yml`
+  da `<CARTELLA>/modello-repo/.github/workflows/ci.yml`, con comandi e immagini in
+  `.catena.yml`. Nel wrapper restano solo i job propri del progetto (es. `e2e`); quelli che
+  la CI condivisa copre si tolgono, con gli script che usavano solo loro
+  (`.github/scripts/migrazioni-distruttive.sh`, `test-indeboliti.sh`).
+- I check cambiano nome (`ci / lint`, …): i ruleset vanno aggiornati **nello stesso momento**
+  del merge, con il via esplicito dell'utente (`docs/ci.md`, «Passaggio»).
 
 **Etichette**: le crea il preflight della catena. Puoi anticiparle da qui:
 `GH_REPO=<owner>/<repo> CATENA=<CARTELLA> bash <CARTELLA>/scripts/preflight.sh etichette`

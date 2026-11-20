@@ -66,8 +66,9 @@ Due ruleset, `develop` e `master` (`docs/esempi/ruleset-develop.json`,
 `docs/esempi/ruleset-master.json`):
 - cancellazione e force push vietati;
 - PR obbligatoria con 0 approvazioni (su `master` anche la review del code owner);
-- controlli obbligatori: **i nomi esatti dei job** di lint, tipi, test, build, migrazioni
-  presenti nella CI. Mai e2e. Un controllo che non esiste blocca ogni PR per sempre;
+- controlli obbligatori: **i nomi esatti dei check** della CI condivisa (`ci / lint`,
+  `ci / tipi`, `ci / test`, `ci / build <servizio>`, `ci / migrazioni`; `ci / test-db` se
+  configurato), `docs/ci.md`. Mai e2e. Un controllo che non esiste blocca ogni PR per sempre;
 - bypass per il ruolo admin.
 
 ```bash
