@@ -109,6 +109,7 @@ pf_controlli_obbligatori() { gh api "repos/$GH_REPO/rules/branches/$1" --jq '[.[
 pf_environment_esiste() { gh api "repos/$GH_REPO/environments/$1" --silent > /dev/null 2>&1; }
 # I rami ammessi dalla policy di un environment, uno per riga (vuoto se la policy non è per rami)
 pf_environment_rami() { gh api "repos/$GH_REPO/environments/$1/deployment-branch-policies" --jq '.branch_policies[].name' 2> /dev/null || true; }
-# true se il repository ha l'auto-merge abilitato (serve al riporto di produzione in sviluppo)
-pf_auto_merge() { gh api "repos/$GH_REPO" --jq '.allow_auto_merge' 2> /dev/null || echo false; }
+# true se il repository ha l'auto-merge abilitato. Il campo lo vedono solo gli amministratori:
+# con il token di Actions risponde vuoto, quindi serve all'installazione, non al preflight
+pf_auto_merge() { gh api "repos/$GH_REPO" --jq '.allow_auto_merge // empty' 2> /dev/null || true; }
 pf_variabile() { gh variable get "$1" 2> /dev/null || true; }
