@@ -194,6 +194,22 @@ ripristina_protetti() {
   done
 }
 
+# file_vietati <base> <file dei test modificabili>: nella patch nell'indice (rispetto a HEAD)
+# i file protetti o e2e toccati, e i test della base cancellati o modificati senza permesso.
+# Uno per riga; vuoto se la patch è pulita
+file_vietati() {
+  cd "$REPO_DIR" || return 1
+  local st f
+  git diff --cached --name-status --no-renames HEAD | while IFS=$'\t' read -r st f; do
+    if grep -qP -- "$RE_PROTETTI|$RE_E2E" <<< "$f"; then echo "$f"; continue; fi
+    grep -qP -- "$RE_TEST" <<< "$f" || continue
+    git cat-file -e "origin/$1:$f" 2> /dev/null || continue
+    [ "$st" = M ] && grep -qxF -- "$f" "$2" && continue
+    [ "$st" = A ] && continue
+    echo "$f"
+  done
+}
+
 # ---------------------------------------------------------------- adattatore della piattaforma
 # shellcheck source=../piattaforme/github/adattatore.sh
 source "$CATENA/piattaforme/$PIATTAFORMA/adattatore.sh"

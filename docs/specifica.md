@@ -131,7 +131,10 @@ Nessun agente può cambiare: `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
 non si scrivono né si modificano. I test che esistono già nella base il developer non li
 cancella e modifica solo quelli che il team leader (o il revisore) gli autorizza in
 `test_modificabili`. Le modifiche agli altri file protetti le propone una persona, in una PR
-normale.
+normale. La raccolta gira nel job di Claude, che può scriverne i file di appoggio: per questo il
+job `esito` (con il token, senza Claude) ricalcola i permessi dall'issue e ricontrolla la
+patch. Una patch del developer che tocca file protetti, e2e o test della base senza permesso
+porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
 
 ## 9. Tetti
 
