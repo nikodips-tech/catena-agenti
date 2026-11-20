@@ -35,6 +35,10 @@ json_valido "$f" '(.approvato | type) == "boolean" and (.nota | type) == "string
   || non_valido "formato non previsto: approvato, nota, sottotask, rimuovi"
 
 nota=$(jq -r '.nota' "$f")
+# Proposte per le regole del progetto (.claude/rules): le decide il proprietario, la catena
+# le riporta soltanto. Si accodano alla nota, qualunque sia l'esito
+proposte=$(jq -r '(.proposte // []) | map(select(type == "string" and length > 0)) | map("- " + .) | join("\n")' "$f" 2> /dev/null || true)
+[ -z "$proposte" ] || nota+=$'\n\n'"**Proposte per le regole del progetto** (\`.claude/rules/\`, decidi tu):"$'\n'"$proposte"
 
 if [ "$(jq -r '.approvato' "$f")" = true ]; then
   printf '%s\n\n%s\n\n_%s_\n' "$T_REV_OK" "$nota" "$cons" | pf_issue_commenta "$ISSUE" -

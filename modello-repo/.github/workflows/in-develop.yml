@@ -18,3 +18,4 @@ jobs:
       issues: write
       pull-requests: read
     uses: nikodips-tech/catena-agenti/.github/workflows/in-develop.yml@v1
+    secrets: inherit

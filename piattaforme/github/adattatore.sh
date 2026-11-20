@@ -107,4 +107,8 @@ pf_etichetta_crea() { gh label create "$1" --color "$2" --description "$3" --for
 pf_etichette_repo() { gh label list --limit 200 --json name --jq '.[].name'; }
 pf_controlli_obbligatori() { gh api "repos/$GH_REPO/rules/branches/$1" --jq '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context] | unique | .[]' 2> /dev/null || true; }
 pf_environment_esiste() { gh api "repos/$GH_REPO/environments/$1" --silent > /dev/null 2>&1; }
+# I rami ammessi dalla policy di un environment, uno per riga (vuoto se la policy non è per rami)
+pf_environment_rami() { gh api "repos/$GH_REPO/environments/$1/deployment-branch-policies" --jq '.branch_policies[].name' 2> /dev/null || true; }
+# true se il repository ha l'auto-merge abilitato (serve al riporto di produzione in sviluppo)
+pf_auto_merge() { gh api "repos/$GH_REPO" --jq '.allow_auto_merge' 2> /dev/null || echo false; }
 pf_variabile() { gh variable get "$1" 2> /dev/null || true; }

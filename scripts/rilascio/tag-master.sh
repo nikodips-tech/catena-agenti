@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fine di una release o di un hotfix (niente Claude), dal tag-master del progetto pilota: quello
+# Fine di una release o di un hotfix (niente Claude): quello
 # che dal PC fa `git flow release finish`. A ogni push su master, se il commit è il merge di
 # una PR da release/x.y.z o da un hotfix (hotfix/x.y.z dal PC, hotfix/issue-N della catena:
 # l'ultimo tag più uno sulla patch):

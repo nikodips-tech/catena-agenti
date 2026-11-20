@@ -39,6 +39,7 @@ non tocca dati esistenti, autenticazione, segreti, `.github/`, `CLAUDE.md`, `.cl
 Nel dubbio, issue. In corsia diretta: ramo `diretta/<slug>` da `develop`, commit con prefisso
 (`feat:`, `fix:`, `docs:`, `chore:`), PR verso `develop` con etichette `task` e
 `unione-automatica` (salvo richiesta di guardarla prima), corpo con `Corsia: diretta` e il
-motivo. Per un hotfix: da `master`, etichetta `hotfix`, senza `unione-automatica`.
+motivo. Se c'è una issue, citala con `Refs #n`, mai `Closes`: la chiude il rilascio in
+produzione. Per un hotfix: da `master`, etichetta `hotfix`, senza `unione-automatica`.
 
 Per ragionare su idee e scrivere issue: l'agente `product-owner` (`.claude/agents/`).

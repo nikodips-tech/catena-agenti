@@ -9,4 +9,5 @@ Motivo: <una riga: perché questa corsia>
 Etichette: `task` (verso develop) o `hotfix` (verso master).
 `unione-automatica`: a CI verde la PR si unisce da sola (solo verso develop).
 Il titolo con il prefisso del release: feat:, fix:, docs:, chore:.
+La issue, se c'è: `Refs #n` (mai `Closes`: la chiude il rilascio in produzione).
 -->

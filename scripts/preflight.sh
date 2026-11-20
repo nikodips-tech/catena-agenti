@@ -42,7 +42,17 @@ crea_etichette || problemi+=("Non riesco a creare le etichette della catena (ser
 
 [ "${CLAUDE_TOKEN_PRESENTE:-false}" = true ] || problemi+=("Manca il segreto \`CLAUDE_CODE_OAUTH_TOKEN\` nel repository")
 [ "${APP_OK:-no}" = si ] || problemi+=("Il token della App della catena non si ottiene: controlla l'environment \`agenti\` (variabile \`AGENTI_CLIENT_ID\`, segreto \`AGENTI_APP_KEY\`, policy dei rami che ammette \`$RAMO_SVILUPPO\`) e che la App sia installata sul repository")
-pf_environment_esiste agenti || problemi+=("Manca l'environment \`agenti\`")
+if pf_environment_esiste agenti; then
+  # La policy dei rami deve ammettere sviluppo (catena, release) e produzione (tag-master)
+  rami=$(pf_environment_rami agenti)
+  for r in "$RAMO_SVILUPPO" "$RAMO_PRODUZIONE"; do
+    grep -qxF -- "$r" <<< "$rami" || problemi+=("La policy dei rami dell'environment \`agenti\` non ammette \`$r\` (docs/permessi.md)")
+  done
+else
+  problemi+=("Manca l'environment \`agenti\`")
+fi
+# Il riporto di produzione in sviluppo dopo un tag usa il merge automatico della pull request
+[ "$(pf_auto_merge)" = true ] || problemi+=("Il repository non ha l'auto-merge abilitato (\`gh repo edit --enable-auto-merge\`): serve al riporto di \`$RAMO_PRODUZIONE\` in \`$RAMO_SVILUPPO\` dopo un rilascio")
 
 if [ ! -f "$CONFIG" ]; then
   problemi+=("Manca \`.catena.yml\` nella radice di \`$RAMO_SVILUPPO\` (docs/configurazione.md)")
