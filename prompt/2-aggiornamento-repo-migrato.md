@@ -1,6 +1,6 @@
 # Aggiornare un progetto già migrato con il vecchio metodo
 
-Per i repository (cineNight) che hanno già fatto la migrazione descritta nel vecchio
+Per i repository che hanno già fatto la migrazione descritta nel vecchio
 `migrazione-catena-agenti.md`: CLAUDE.md nuovo, CI, etichette, ruleset, staging e una **copia
 locale** della catena in `.github/workflows/catena-*.yml`, `.github/scripts/` e
 `.claude/agenti/`. Qui si sostituisce la copia con il collegamento alla catena condivisa.
@@ -54,8 +54,8 @@ Ramo `catena-condivisa` da develop, una PR.
 `gh workflow disable` sugli otto workflow.
 
 **Si aggiunge** (tabella in `1-migrazione-nuovo-repo.md`, sezione 4):
-`.github/workflows/catena.yml`, `.catena.yml` (per cineNight parti da
-`<CARTELLA>/docs/esempi/catena-node.yml`, che è già la sua configurazione: verifica i comandi
+`.github/workflows/catena.yml`, `.catena.yml` (per un progetto Node parti da
+`<CARTELLA>/docs/esempi/catena-node.yml`: verifica i comandi
 contro `ci.yml` e `package.json`), i modelli di issue e di PR, `.claude/agents/product-owner.md`
 con la sezione «Fonti» che punta ai documenti esistenti (`docs/visione.md`, `docs/roadmap.md`,
 `docs/INDICE.md`…), la skill `.claude/skills/catena/` con gli agenti `.claude/agents/catena-*.md`

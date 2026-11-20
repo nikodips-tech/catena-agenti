@@ -1,5 +1,5 @@
 # Chiusura, riutilizzabile (workflow_call), niente Claude: la pull request dal ramo dell'issue
-# alla base, aperta con l'App `dipstech-agenti` (environment `agenti`) perché la CI parta da
+# alla base, aperta con l'App della catena (environment `agenti`) perché la CI parta da
 # sola. Il token dell'App non legge le issue: quelle si leggono con il token di Actions.
 name: Catena chiusura
 
@@ -64,6 +64,7 @@ jobs:
       - name: Pull request
         env:
           APP_TOKEN: ${{ steps.app.outputs.token }}
+          APP_NOME: ${{ steps.app.outputs.app-slug }}
         run: bash "$CATENA/scripts/chiusura.sh"
 
       - name: Se qualcosa non va

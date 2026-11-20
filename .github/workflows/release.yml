@@ -1,6 +1,6 @@
 # La release dei progetti, riutilizzabile (workflow_call), niente Claude: prepara o aggiorna la
 # PR release/x.y.z verso master (scripts/rilascio/release.sh, docs/rilascio.md). Lavora con
-# l'App dipstech-agenti (environment `agenti`): così la PR fa partire la CI e il ramo della
+# l'App della catena (environment `agenti`): così la PR fa partire la CI e il ramo della
 # release può contenere modifiche a .github/workflows/.
 name: Catena release
 
@@ -63,4 +63,5 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_NOME: ${{ steps.app.outputs.app-slug }}
         run: bash "$CATENA/scripts/rilascio/release.sh"

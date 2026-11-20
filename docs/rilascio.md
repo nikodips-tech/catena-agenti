@@ -14,7 +14,7 @@ Il merge della release in master lo fa il proprietario: è il suo OK al rilascio
 tag, fatto dall'App, fa partire il rilascio del progetto (`rilascio.yml`, che resta nel
 progetto con staging e anteprime).
 
-Release e tag-master usano l'App `dipstech-agenti` (environment `agenti`, `secrets:
+Release e tag-master usano l'App della catena (environment `agenti`, `secrets:
 inherit`): ciò che fa l'App fa partire gli altri workflow, il token di Actions no. Leggono
 `.catena.yml` da develop (`migrazioni`, `ramo_sviluppo`, `ramo_produzione`).
 

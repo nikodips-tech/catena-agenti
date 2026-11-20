@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fine di una release o di un hotfix (niente Claude), da tag-master.yml di cineNight: quello
+# Fine di una release o di un hotfix (niente Claude), dal tag-master del progetto pilota: quello
 # che dal PC fa `git flow release finish`. A ogni push su master, se il commit è il merge di
 # una PR da release/x.y.z o da un hotfix (hotfix/x.y.z dal PC, hotfix/issue-N della catena:
 # l'ultimo tag più uno sulla patch):
@@ -9,7 +9,8 @@
 # - riporta master in develop con una PR (develop è protetto) e ne chiede il merge automatico;
 # - cancella il ramo della release o dell'hotfix.
 # Le release finite dal PC con git flow arrivano con il loro tag e senza PR: si saltano.
-# Variabili: REPO_DIR (checkout completo con il token dell'App), GH_TOKEN (App), GH_REPO, COMMIT.
+# Variabili: REPO_DIR (checkout completo con il token dell'App), GH_TOKEN (App), GH_REPO, COMMIT,
+# APP_NOME (lo slug dell'App, per l'autore del tag).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../comune.sh"
 cd "$REPO_DIR" || exit 1
@@ -36,8 +37,8 @@ fi
 [[ "$versione" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { errore "versione non valida nel ramo: $ramo"; exit 1; }
 echo "### $ramo → tag $versione" >> "$riepilogo"
 
-git config user.name "dipstech-agenti[bot]"
-git config user.email "dipstech-agenti[bot]@users.noreply.github.com"
+git config user.name "${APP_NOME:-catena-agenti}[bot]"
+git config user.email "${APP_NOME:-catena-agenti}[bot]@users.noreply.github.com"
 # Il tag x.y.z precedente, per le issue della versione (prima del tag nuovo)
 prima=$(git tag -l --merged "$COMMIT" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
 if git rev-parse -q --verify "refs/tags/$versione" > /dev/null; then

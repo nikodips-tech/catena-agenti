@@ -29,7 +29,7 @@ if [ -z "$pr" ]; then
 else
   # I push del token di Actions non fanno partire la CI: un commit vuoto dell'App sì
   ramo_checkout "$ramo" "$base"
-  GIT_NOME=dipstech-agenti GIT_EMAIL=dipstech-agenti@users.noreply.github.com git_identita
+  GIT_NOME="${APP_NOME:-catena-agenti}[bot]" GIT_EMAIL="${APP_NOME:-catena-agenti}[bot]@users.noreply.github.com" git_identita
   git commit -q --allow-empty -m "ci: rilancia i controlli"
   pf_push "$ramo"
 fi

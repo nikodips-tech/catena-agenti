@@ -1,7 +1,7 @@
 {
   "name": "guardia",
   "description": "Hook PreToolUse su Bash e PowerShell: blocca i comandi che Claude non deve mai lanciare (force push, push su master o di tag, merge in master dei repo di produzione, approvazione dei deployment e modifiche a ruleset ed environment, ssh/scp, docker compose down con -v o --remove-orphans).",
-  "author": { "name": "Nicola Di Pietro" },
+  "author": { "name": "nikodips-tech" },
   "repository": "https://github.com/nikodips-tech/catena-agenti",
   "keywords": ["hook", "sicurezza", "git"]
 }

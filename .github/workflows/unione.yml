@@ -1,6 +1,6 @@
 # Unione, riutilizzabile (workflow_call), niente Claude: a CI finita, le pull request con
 # `unione-automatica` si uniscono (verde) o si riparano (rosso). Il merge lo fa l'App
-# `dipstech-agenti` (environment `agenti`): un merge col token di Actions non farebbe partire
+# della catena (environment `agenti`): un merge col token di Actions non farebbe partire
 # release e staging.
 name: Catena unione
 

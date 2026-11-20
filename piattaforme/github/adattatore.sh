@@ -3,7 +3,7 @@
 # Un'altra piattaforma si aggiunge scrivendo un file con le stesse funzioni (docs/portabilita.md).
 #
 # Serve `gh` autenticato (GH_TOKEN) e GH_REPO=<proprietario>/<repo>.
-# Le funzioni segnate (App) usano il token dell'App `dipstech-agenti` in APP_TOKEN: pull request,
+# Le funzioni segnate (App) usano il token dell'App della catena in APP_TOKEN: pull request,
 # merge e push fatti con il token di Actions non fanno partire gli altri workflow (CI, release).
 # Il token dell'App però non legge le issue: le issue si leggono sempre con il token di Actions.
 
