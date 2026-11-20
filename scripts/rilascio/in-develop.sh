@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Issue entrate in develop (niente Claude), da chiudi-issue.yml: quando una PR entra in develop,
+# Issue entrate in develop (niente Claude), da in-develop.yml: quando una PR entra in develop,
 # le issue citate nella descrizione o nei commit (Closes, Fixes, Resolves o Refs #N) ricevono un
 # commento e l'etichetta `in-develop`. Restano aperte: le chiude tag-master al rilascio.
 # Si saltano il riporto di master in develop (porta issue già in produzione) e i rami della

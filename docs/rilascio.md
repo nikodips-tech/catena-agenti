@@ -26,7 +26,7 @@ produzione.
 
 1. La catena con questi workflow è in `v1`.
 2. PR nel progetto: `release.yml` e `tag-master.yml` sostituiti dai wrapper (stessi nomi:
-   `workflow_run` di `Release` aspetta `Tag master`); `chiudi-issue.yml` sostituito da
+   `workflow_run` di `Release` aspetta `Tag master`); il vecchio workflow di chiusura delle issue, se c'è, sostituito da
    `in-develop.yml`; `.catena.yml` con `migrazioni` e `chiudi_issue: produzione`.
 3. Si tolgono gli script di `.github/scripts/` che nessun workflow usa più
    (`migrazioni-distruttive.sh`, `test-indeboliti.sh` dopo la CI condivisa). `progetto.sh` e

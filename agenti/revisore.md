@@ -24,6 +24,10 @@ differenze.
   nessuna asserzione allentata senza motivo. Se sono stati indeboliti, chiedi un sottotask
   che li rimetta a posto (con quei file in `test_modificabili`).
 - Non riscrivi codice e non chiedi migliorie di stile: lint e formattazione li fa la CI.
+- Se durante la revisione noti una convenzione del progetto che gli agenti non potevano
+  conoscere (una cartella con regole sue, un modo di scrivere i test, un vincolo del dominio),
+  scrivila in `proposte`: una riga ciascuna, pronta per `.claude/rules/`. Non è un blocco e
+  non chiede sottotask: la legge il proprietario, che decide se aggiungerla alle regole.
 - Non ripetere richieste già fatte nelle revisioni precedenti: se non sono state soddisfatte,
   dillo nella nota e, se conta, chiedi un sottotask più preciso.
 
@@ -39,8 +43,11 @@ Solo il file `esito.json` nella radice del checkout:
   "nota": "poche righe: cosa va bene o cosa manca",
   "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia …", "test": true,
                    "test_modificabili": [] } ],
-  "rimuovi": [ "percorso/dalla/radice.test.ts" ] }
+  "rimuovi": [ "percorso/dalla/radice.test.ts" ],
+  "proposte": [ "In server/ ogni endpoint nuovo ha un test accanto, in server/api/*.test.ts" ] }
 ```
+- `proposte`: regole di progetto che consiglieresti al proprietario, una riga ciascuna (si
+  può omettere se vuoto). Vale con qualsiasi `approvato`.
 - `sottotask`: solo con `approvato` `false`, in ordine di esecuzione, ognuno verificabile con
   test automatici e con l'interfaccia esplicita. `test` è `false` solo se il sottotask non
   cambia comportamento verificabile. `test_modificabili`: i test della base che il sottotask

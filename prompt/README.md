@@ -1,46 +1,43 @@
 # I prompt da incollare in Claude Code
 
-Tre prompt, da lanciare ognuno in una **nuova sessione** di Claude Code. Sostituisci
-`<CARTELLA>` con il percorso della cartella in cui hai estratto la catena (per esempio
-`D:\strumenti\catena-agenti`). Tutti i prompt leggono prima `regole-sessione.md`.
+Due prompt per i progetti, uno per il repository della catena. Ognuno in una **nuova
+sessione** di Claude Code. Sostituisci `<CARTELLA>` con il percorso di una copia locale della
+catena (clone o cartella estratta), che serve solo per leggere i documenti: i progetti usano
+la catena da GitHub.
+
+Tutti leggono prima `regole-sessione.md`; i due prompt dei progetti eseguono poi
+`installazione.md`, che è uguale per entrambi. Alla fine di ogni prompt il resoconto.
+
+## 1. Un repository nuovo
+
+Un repository senza niente di Claude e senza workflow, o con workflow che non c'entrano con
+Claude e che restano. Sessione aperta **nella cartella del repository**:
+
+```
+Leggi <CARTELLA>/prompt/1-repo-nuovo.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
+```
+
+## 2. Un repository con un'impostazione precedente
+
+Un repository che ha già `CLAUDE.md`, `.claude/`, workflow di Claude o di una versione
+precedente del metodo (CI, release, tag, chiusura delle issue, catena copiata). Si cancella
+tutto il vecchio e si installa da zero. Sessione aperta **nella cartella del repository**:
+
+```
+Leggi <CARTELLA>/prompt/2-repo-esistente.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
+```
 
 ## 0. Pubblicare la catena (una volta sola)
 
-Sessione aperta **nella cartella estratta**:
+Serve solo se il repository della catena non esiste ancora su GitHub:
 
 ```
 Leggi <CARTELLA>/prompt/0-pubblica-catena.md ed eseguilo. La cartella della catena è <CARTELLA>.
 ```
 
-Crea il repository `nikodips-tech/catena-agenti` su GitHub, lo pubblica e mette il tag `v1`.
-Da qui in avanti i progetti leggono la catena da GitHub; la cartella estratta serve ai prompt
-di migrazione solo per leggere i documenti.
-
-## 1. Un progetto che non ha mai avuto la catena
-
-Sessione aperta **nella cartella del repository del progetto**:
-
-```
-Leggi <CARTELLA>/prompt/1-migrazione-nuovo-repo.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
-```
-
-Ricognizione, pulizia della vecchia parte Claude, fondamenta (CLAUDE.md, CI, etichette,
-ruleset, staging), collegamento alla catena, verifica, resoconto.
-
-## 2. Un progetto già migrato con il vecchio metodo
-
-Sessione aperta **nella cartella del repository del progetto**:
-
-```
-Leggi <CARTELLA>/prompt/2-aggiornamento-repo-migrato.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
-```
-
-Sostituisce la copia locale della catena con il wrapper, aggiunge `.catena.yml`, product
-owner e modelli, confronta i vecchi file provati con i nuovi e riferisce le differenze. Niente
-pulizie.
-
 ## Dopo
 
-La prova vera la fai tu: una issue piccola e reale con `task`, poi `auto`. Prima sul progetto pilota,
-poi sugli altri. Se qualcosa non va, la correzione si fa nel repository della catena e si
-ripubblica il tag (`README.md` della catena, sezione Versioni): nessun progetto va ritoccato.
+La prova vera la fai tu: una issue piccola e reale con `task`, poi `auto`. Prima su un
+progetto, poi sugli altri. Se qualcosa non va, la correzione si fa nel repository della catena
+e si ripubblica il tag (`README.md` della catena, sezione Versioni): nessun progetto va
+ritoccato.

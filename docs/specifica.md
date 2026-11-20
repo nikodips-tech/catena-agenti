@@ -31,7 +31,7 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 |---|---|---|---|---|---|
 | Team leader | opus | 30 | 20 min | Read, Glob, Grep, Write | `esito.json`: specifica + corsia + sottotask, o domanda; in escalation la decisione |
 | Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` | test e codice del sottotask, in TDD |
-| Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi |
+| Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi, più `proposte` di regole di progetto per il proprietario |
 | Editor | haiku | 15 | 15 min | Read, Glob, Grep, Write, Edit | documentazione |
 | Product owner | opus | — | — | lettura + gh issue | issue pronte; **fuori dai workflow** |
 
@@ -148,3 +148,25 @@ porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
 | Fermo prima della ripresa del guardiano | 90 min | `guardiano_minuti` in `.catena.yml` |
 | Nota passata tra i passi | 3000 caratteri | `pf_passo_avvia` |
 | Diff passato al revisore | 200 kB | `contesto.sh` |
+
+## 10. Quando la catena si ferma
+
+Per costruzione, la catena aspetta una persona solo in quattro casi:
+
+| Fermata | Chi la toglie | Come |
+|---|---|---|
+| `domanda` del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
+| `bloccato` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema e rimette `auto` |
+| pull request con riserve del revisore | il proprietario | la unisce o la chiude |
+| pull request verso `master` (release, hotfix) | il proprietario | il merge è l'OK al rilascio |
+
+Tutto il resto riparte da solo: tentativi, escalation, riparazione della CI, coda, guardiano.
+
+## 11. Regole di progetto
+
+Le convenzioni di un progetto stanno in `CLAUDE.md` (corto, generale) e, se il repository ha
+aree con regole diverse (più pacchetti, più frontend), in `.claude/rules/*.md` con il campo
+`paths` nel frontmatter. Le legge anche la CLI sul runner: gli agenti della catena le
+rispettano senza saperlo. Sono file protetti: li scrive il proprietario, all'installazione
+(`prompt/installazione.md`, passo D) o quando il revisore gliele propone (`proposte` in
+`esito.json`, riportate nel commento di revisione). Nessun agente le cambia da solo.

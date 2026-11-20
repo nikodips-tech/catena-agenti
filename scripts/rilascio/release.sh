@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# La release (niente Claude), dalla release del progetto pilota. A ogni push su develop, o a mano:
+# La release (niente Claude). A ogni push su develop, o a mano:
 # con commit feat o fix non ancora in master crea release/x.y.z dalla testa di develop e la
 # pull request verso master, con le note fatte dai commit; se una release è già aperta la
 # porta alla testa di develop (o la rinumera, se cambia la versione). Dopo un tag-master

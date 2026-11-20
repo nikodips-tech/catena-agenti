@@ -22,10 +22,11 @@ identità, l'App.
 |---|---|---|
 | Token di Claude | Settings → Secrets → Actions | `CLAUDE_CODE_OAUTH_TOKEN` |
 | App installata | Settings → GitHub Apps | la GitHub App della catena (una tua, per esempio `<account>-agenti`), con Contents e Pull requests in scrittura sul repo |
-| Environment | Settings → Environments | `agenti`, deployment branch policy: `develop` |
+| Environment | Settings → Environments | `agenti`, deployment branch policy: `develop` **e** `master` (catena e release girano su develop, il tag su master) |
 | Variabile dell'environment | nell'environment `agenti` | `AGENTI_CLIENT_ID` |
 | Segreto dell'environment | nell'environment `agenti` | `AGENTI_APP_KEY` (chiave privata PEM) |
 | Workflow possono aprire PR | Settings → Actions → General | "Allow GitHub Actions to create and approve pull requests" |
+| Auto-merge | Settings → General → Pull Requests | "Allow auto-merge": lo usa il riporto di master in develop dopo un tag |
 | Configurazione | radice di `develop` | `.catena.yml` |
 | Workflow | `.github/workflows/catena.yml` | il wrapper di `modello-repo/` |
 | Etichette | — | le crea il preflight (`preflight.sh etichette`) |
@@ -38,6 +39,8 @@ gh api -X PUT repos/<owner>/<repo>/environments/agenti \
   -F 'deployment_branch_policy[protected_branches]=false' \
   -F 'deployment_branch_policy[custom_branch_policies]=true'
 gh api -X POST repos/<owner>/<repo>/environments/agenti/deployment-branch-policies -f name=develop -f type=branch
+gh api -X POST repos/<owner>/<repo>/environments/agenti/deployment-branch-policies -f name=master -f type=branch
+gh repo edit <owner>/<repo> --enable-auto-merge
 gh variable set AGENTI_CLIENT_ID -e agenti -R <owner>/<repo> -b <client id>
 gh secret set AGENTI_APP_KEY -e agenti -R <owner>/<repo> < chiave.pem
 gh api -X PUT repos/<owner>/<repo>/actions/permissions/workflow \
