@@ -1,0 +1,17 @@
+{
+  "description": "Guardia: blocca force push, push su master o di tag, merge in master dei repo di produzione (config/produzione.txt), approvazione dei deployment e modifiche a ruleset ed environment, ssh/scp e docker compose down con -v o --remove-orphans.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/guardia.sh\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+# Repo in cui master è produzione: lì il merge in master (il rilascio) lo fa Nicola.
+# Un nome per riga, come su GitHub (maiuscole indifferenti). Lo legge scripts/guardia.sh (docs/guardia.md).
+FantaFormula1
+cinenight
+dips-lab
+NuovoCentroCapannori
+livegest
