@@ -19,6 +19,8 @@ done
 [ "$(jq -r .sha <<< "$pr")" = "$SHA" ] || { log "la CI è di un commit superato"; exit 0; }
 numero=$(jq -r .numero <<< "$pr"); etichette_pr=$(jq -r '.etichette | join(" ")' <<< "$pr")
 ha "$etichette_pr" "$E_UNIONE" || { log "la PR #$numero non ha $E_UNIONE: non tocco niente"; bash "$CATENA/scripts/coda.sh"; exit 0; }
+# In master non si unisce mai da soli: l'unione è l'OK del proprietario al rilascio
+[ "$base" != "$RAMO_PRODUZIONE" ] || { log "la PR #$numero va in $base: la unisce il proprietario"; bash "$CATENA/scripts/coda.sh"; exit 0; }
 
 tipo=task
 if ha "$etichette_pr" "$E_HOTFIX" || [ "$base" = "$RAMO_PRODUZIONE" ]; then tipo=hotfix; fi
@@ -37,9 +39,9 @@ if [ "$ESITO" = success ]; then
   soggetto=$(titolo_squash "$titolo" "$tipo" "$issue")
   # Il riferimento all'issue nel messaggio dello squash: lo cerca il rilascio per chiuderla
   corpo=""; [ -z "$issue" ] || corpo=$(riferimento_issue "$issue" "$base")
-  # In develop squash; in master sempre un merge commit (docs/rilascio.md)
-  metodo=squash; [ "$base" != "$RAMO_PRODUZIONE" ] || metodo=merge
-  if pf_pr_unisci "$numero" "$metodo" "$soggetto" "$corpo"; then
+  # Squash: si unisce solo in develop. Se un giorno anche in master, lì serve "merge"
+  # (docs/rilascio.md)
+  if pf_pr_unisci "$numero" squash "$soggetto" "$corpo"; then
     dove="Unita in \`$base\`"
     variabile=$(cfg staging_variabile); workflow_staging=$(cfg staging_workflow)
     if [ -n "$variabile" ] && [ "$base" = "$RAMO_SVILUPPO" ]; then
