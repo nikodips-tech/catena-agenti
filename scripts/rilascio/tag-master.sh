@@ -36,6 +36,14 @@ if [[ "$ramo" =~ ^hotfix/issue- ]]; then
 fi
 [[ "$versione" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { errore "versione non valida nel ramo: $ramo"; exit 1; }
 echo "### $ramo → tag $versione" >> "$riepilogo"
+# Una release unita con squash (o rebase) ha un solo genitore: i commit di develop non
+# risultano in master e la release successiva li ripeterebbe. Si va avanti, ma si avvisa
+storia=""
+if [[ "$ramo" == release/* ]] && [ "$(git rev-list --parents -n 1 "$COMMIT" | wc -w)" -lt 3 ]; then
+  storia="$ramo è entrata in \`$RAMO_PRODUZIONE\` senza merge commit (squash o rebase): i commit di \`$RAMO_SVILUPPO\` non risultano in \`$RAMO_PRODUZIONE\` e la prossima release li ripeterebbe. Serve una PR da \`$RAMO_SVILUPPO\` (o da un ramo non \`release/*\`) verso \`$RAMO_PRODUZIONE\` unita con merge commit, e nel ruleset di \`$RAMO_PRODUZIONE\` solo il merge (docs/rilascio.md della catena)."
+  avviso "$storia"
+  printf '\n> [!WARNING]\n> %s\n\n' "$storia" >> "$riepilogo"
+fi
 
 git config user.name "${APP_NOME:-catena-agenti}[bot]"
 git config user.email "${APP_NOME:-catena-agenti}[bot]@users.noreply.github.com"
@@ -73,6 +81,7 @@ else
   fi
   # Merge commit, come git flow. Con file di CODEOWNERS GitHub chiede la revisione al proprietario
   gh pr merge "$pr" -R "$GH_REPO" --merge --auto || avviso "non riesco a chiedere il merge automatico di #$pr: va unita a mano"
+  [ -z "$storia" ] || gh pr comment "$pr" -R "$GH_REPO" --body "> [!WARNING]"$'\n'"> $storia" > /dev/null || true
 fi
 
 git push origin --delete "$ramo" || echo "ramo $ramo già cancellato"

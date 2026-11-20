@@ -87,10 +87,10 @@ pf_pr_apri() {
 pf_pr_etichetta_aggiungi() { gh pr edit "$1" --add-label "$2" > /dev/null; }
 pf_pr_etichetta_togli() { gh pr edit "$1" --remove-label "$2" > /dev/null 2>&1 || true; }
 pf_pr_commenta() { gh pr comment "$1" --body "$2"; }
-# pf_pr_unisci <pr> <soggetto> [corpo del commit] (App)
+# pf_pr_unisci <pr> <squash|merge> <soggetto> [corpo del commit] (App)
 pf_pr_unisci() {
-  if [ -n "${3:-}" ]; then con_app gh pr merge "$1" --squash --delete-branch --subject "$2" --body "$3"
-  else con_app gh pr merge "$1" --squash --delete-branch --subject "$2"; fi
+  if [ -n "${4:-}" ]; then con_app gh pr merge "$1" "--$2" --delete-branch --subject "$3" --body "$4"
+  else con_app gh pr merge "$1" "--$2" --delete-branch --subject "$3"; fi
 }
 # JSON {numero, titolo, corpo, etichette[], ramo, base, stato, unita}
 pf_pr_json() {

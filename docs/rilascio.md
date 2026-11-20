@@ -10,7 +10,14 @@ sono tre wrapper di poche righe (`modello-repo/.github/workflows/`); la logica s
 | `tag-master.yml` (`Tag master`) | `tag-master.yml` | push su master | se il commit viene da `release/*` o `hotfix/*`: tag `x.y.z` (gli hotfix della catena prendono la patch successiva), issue citate nei commit della versione chiuse e senza `in-develop`, PR master → develop con merge automatico, ramo cancellato |
 | `in-develop.yml` (`In develop`) | `in-develop.yml` | PR unita in develop | le issue citate (`Refs #N`, `Closes`, `Fixes`, `Resolves`) ricevono un commento e `in-develop`. Si saltano il riporto di master e i rami della catena (`issue-N`), che segue l'unione |
 
-Il merge della release in master lo fa il proprietario: è il suo OK al rilascio. Il push del
+Il merge della release in master lo fa il proprietario: è il suo OK al rilascio, e va fatto
+con un **merge commit**. Con uno squash i commit di develop non risultano in master: la
+release successiva li ritroverebbe tutti, con le note già rilasciate. Per questo il ruleset di
+master ammette solo il merge (`docs/esempi/ruleset-master.json`); in develop lo squash va
+bene. Se succede, `Tag master` lo segnala, e si rimedia con una PR da develop verso master
+unita con merge commit. La release non si apre se master e develop hanno gli stessi file.
+
+Il push del
 tag, fatto dall'App, fa partire il rilascio del progetto (`rilascio.yml`, che resta nel
 progetto con staging e anteprime).
 
