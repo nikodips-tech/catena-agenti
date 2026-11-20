@@ -63,11 +63,15 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
 
 ### Developer
 Per ogni sotto-task, in TDD: prima i test, eseguiti perché falliscano, poi il codice, poi
-tutti i controlli. I test che esistono già nella base non si toccano (lo script li ripristina);
-quelli aggiunti sul ramo sono suoi. Con `Test: no` non scrive test. Verde: un commit
-`feat: #n` che assorbe i tentativi precedenti. Rosso: il lavoro resta sul ramo come
+tutti i controlli. I test che esistono già nella base non si cancellano e si modificano solo
+quelli che il team leader elenca nella riga `Test modificabili:` del sotto-task (in corsia
+diretta della specifica), più quelli già modificati sul ramo: gli altri lo script li
+ripristina. Quelli aggiunti sul ramo sono suoi. Con `Test: no` non scrive test. Verde: un
+commit `feat: #n` che assorbe i tentativi precedenti. Rosso: il lavoro resta sul ramo come
 `wip: #n tentativo k`, il tentativo dopo riceve l'errore e corregge. Al terzo rosso,
-escalation al team leader.
+escalation al team leader; subito, se lo script ha ripristinato test della base (il
+tentativo dopo rifarebbe la stessa modifica). Il revisore riceve l'elenco dei test della base
+modificati e controlla che non siano stati indeboliti.
 
 ### Chiusura (`chiusura.sh`, App)
 PR dal ramo alla base, aperta dall'App: la CI parte da sola (con il token di Actions no). PR

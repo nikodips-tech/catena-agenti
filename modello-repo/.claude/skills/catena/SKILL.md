@@ -12,7 +12,8 @@ tool, uno alla volta, e riporti all'utente una riga per passo.
 
 Regole di `CLAUDE.md` sempre valide: mai in `master`, niente e2e, niente verifiche
 dell'interfaccia, niente `auto`. In più: i test che esistono già in `develop` non si
-modificano, e non si toccano i file protetti (`.github/`, `.claude/`, `CLAUDE.md`,
+cancellano e si modificano solo quelli che il team leader mette in `test_modificabili`, e
+non si toccano i file protetti (`.github/`, `.claude/`, `CLAUDE.md`,
 `.catena.yml`, `.env`).
 
 ## 0. Preparazione
@@ -46,25 +47,32 @@ chieda di fermarsi.
 ## 3. Per ogni sottotask
 
 Scrivi il sottotask in `$CATENA/lavoro/sottotask.md` (con la riga `Test: no` se
-`test: false`).
+`test: false`). In `$CATENA/lavoro/test-modificabili.txt`, uno per riga, i test di `develop`
+che il developer può modificare: il `test_modificabili` del sottotask (in corsia diretta
+quello al primo livello) più quelli già modificati sul ramo
+(`git diff --diff-filter=M --name-only develop...HEAD -- <file di test>`).
 
 **Developer**, fino a 3 tentativi: lancia `catena-developer` con `developer.md`,
-`specifica.md`, `sottotask.md`, l'elenco dei file di test aggiunti sul ramo, e dal secondo
-tentativo `errore.txt` con le ultime righe dell'errore. Dopo ogni tentativo:
+`specifica.md`, `sottotask.md`, l'elenco dei file di test aggiunti sul ramo,
+`test-modificabili.txt`, e dal secondo tentativo `errore.txt` con le ultime righe
+dell'errore. Dopo ogni tentativo:
 1. ripristina file protetti ed e2e, e i test che esistono già in `develop` se li ha
-   modificati o cancellati (`git diff --name-status develop -- <file di test>`: per quelli
-   della base solo nessuna modifica è ammessa);
+   cancellati o modificati senza che siano in `test-modificabili.txt`
+   (`git diff --name-status develop -- <file di test>`);
 2. `bash $CATENA/scripts/controlli.sh formatta <file cambiati rispetto a develop>`;
 3. `bash $CATENA/scripts/controlli.sh tutto`;
 4. verde → commit `feat: <titolo>` (o `fix:` per hotfix), prossimo sottotask;
    rosso → lascia il lavoro nel checkout (il tentativo dopo lo corregge), scrivi
-   `errore.txt`, riprova. Al terzo rosso: fermati, mostra l'errore all'utente e chiedi se
-   riformulare il sottotask (rilanci il team leader con l'errore) o interrompere.
+   `errore.txt`, riprova. Al terzo rosso, o al primo rosso dopo aver ripristinato test di
+   `develop` (il tentativo dopo rifarebbe la stessa modifica): fermati, mostra l'errore
+   all'utente e chiedi se riformulare il sottotask (rilanci il team leader con l'errore, che
+   può autorizzare quei test in `test_modificabili`) o interrompere.
 
 ## 4. Revisore (solo corsia completa, al massimo 2 giri)
 
 Lancia `catena-revisore` con `revisore.md`, `specifica.md`, il diff `develop...HEAD`
-salvato in `$CATENA/lavoro/differenze.diff`, l'elenco dei test aggiunti dal developer. Esito
+salvato in `$CATENA/lavoro/differenze.diff`, l'elenco dei test aggiunti dal developer e
+quello dei test di `develop` modificati sul ramo. Esito
 in `$CATENA/lavoro/esito.json`:
 - `approvato` → avanti;
 - `rimuovi` → cancella solo file aggiunti sul ramo e assenti in develop, commit

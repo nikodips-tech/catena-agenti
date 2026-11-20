@@ -123,6 +123,27 @@ corsia_di() { if grep -qiE '^Corsia:[[:space:]]*diretta' <<< "$1"; then echo dir
 # senza_test <corpo sottotask>: vero se il corpo ha la riga "Test: no"
 senza_test() { tr -d '\r' <<< "$1" | grep -qx 'Test: no'; }
 
+# test_modificabili <testo>: i test della base che il team leader permette di modificare (la
+# riga "Test modificabili: a, b" del sotto-task o della specifica), uno per riga
+test_modificabili() {
+  tr -d '\r' <<< "$1" | sed -n 's/^Test modificabili:[[:space:]]*//p' | tr ',' '\n' \
+    | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//' | grep -v '^$' || true
+}
+
+# righe_sottotask <file esito> <elemento jq>: le righe di servizio in fondo al corpo di un
+# sotto-task. `== false` e non `// true`: per jq `false // true` vale true
+righe_sottotask() {
+  local tm
+  [ "$(jq -r "$2.test == false" "$1")" != true ] || printf '\nTest: no\n'
+  tm=$(jq -r "($2.test_modificabili // []) | join(\", \")" "$1")
+  [ -z "$tm" ] || printf '\nTest modificabili: %s\n' "$tm"
+}
+
+# Validazione jq di un elenco di sotto-task (team leader e revisore)
+SOTTOTASK_VALIDI='all(.[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string"
+  and ((.test // true) | type) == "boolean"
+  and ((.test_modificabili // []) | type) == "array" and all((.test_modificabili // [])[]; type == "string" and length > 0))'
+
 # ---------------------------------------------------------------- git
 git_identita() {
   git -C "$REPO_DIR" config user.name "${GIT_NOME:-catena-agenti[bot]}"

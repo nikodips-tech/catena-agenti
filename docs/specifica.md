@@ -85,7 +85,8 @@ estranei`, `docs: #<issue>`.
 2. **Team leader**: specifica + corsia. Diretta → developer sull'issue. Completa →
    sub-issue, poi la prima.
 3. **Developer**, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
-   codice; lo script ripristina i file protetti e i test della base toccati, formatta tutto il
+   codice; lo script ripristina i file protetti e i test della base toccati senza permesso
+   (`Test modificabili:` del sotto-task), formatta tutto il
    ramo, esegue lint, tipi, test (e test con database) come la CI. Verde → un commit,
    sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con l'errore e il
    lavoro già fatto; al terzo → escalation.
@@ -104,7 +105,7 @@ estranei`, `docs: #<issue>`.
 | Fallimento | Passo dopo |
 |---|---|
 | Agente tocca `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, `.env`, e2e | file ripristinati, avviso nel commento, si prosegue |
-| Developer modifica test che esistono nella base | ripristinati; i controlli decidono |
+| Developer modifica test della base non in `test_modificabili`, o ne cancella | ripristinati; i controlli decidono; se rossi, **escalation subito** |
 | Developer rosso (tentativo 1, 2) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
 | Developer rosso al tentativo 3 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
 | Escalation già fatta | `bloccato`, lavoro parziale sul ramo |
@@ -127,8 +128,10 @@ diretta` e il motivo. La CI e l'unione sono le stesse della catena. Niente issue
 
 Nessun agente può cambiare: `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
 `.catena.yml`, file `.env` (non `.example`), più `file_protetti` di `.catena.yml`. I test e2e
-non si scrivono né si modificano. I test che esistono già nella base non li tocca il
-developer. Le modifiche a questi file le propone una persona, in una PR normale.
+non si scrivono né si modificano. I test che esistono già nella base il developer non li
+cancella e modifica solo quelli che il team leader (o il revisore) gli autorizza in
+`test_modificabili`. Le modifiche agli altri file protetti le propone una persona, in una PR
+normale.
 
 ## 9. Tetti
 

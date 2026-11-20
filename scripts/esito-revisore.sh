@@ -30,7 +30,7 @@ json_valido "$f" '(.approvato | type) == "boolean" and (.nota | type) == "string
   and (.approvato or
        (((.sottotask // []) | type) == "array" and ((.rimuovi // []) | type) == "array"
         and (((.sottotask // []) | length) + ((.rimuovi // []) | length)) > 0
-        and all((.sottotask // [])[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string" and ((.test // true) | type) == "boolean")
+        and ((.sottotask // []) | '"$SOTTOTASK_VALIDI"')
         and all((.rimuovi // [])[]; type == "string" and length > 0)))' \
   || non_valido "formato non previsto: approvato, nota, sottotask, rimuovi"
 
@@ -82,7 +82,7 @@ fi
 for i in $(seq 0 $((n - 1))); do
   jq -r ".sottotask[$i].descrizione" "$f" > "$TMP_BASE/corpo.md"
   printf '\nSotto-task di #%s (revisione, giro %s).\n' "$ISSUE" "$((giri + 1))" >> "$TMP_BASE/corpo.md"
-  [ "$(jq -r ".sottotask[$i].test // true" "$f")" != false ] || printf '\nTest: no\n' >> "$TMP_BASE/corpo.md"
+  righe_sottotask "$f" ".sottotask[$i]" >> "$TMP_BASE/corpo.md"
   numero=$(pf_issue_crea "$(jq -r ".sottotask[$i].titolo" "$f")" "$TMP_BASE/corpo.md" "$E_SOTTOTASK")
   pf_sottoissue_collega "$ISSUE" "$numero"
 done
