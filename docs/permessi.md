@@ -16,7 +16,13 @@ identità, l'App.
 
 ## Realizzazione su GitHub
 
-### Cosa serve in ogni repository (lo verifica il preflight)
+### Cosa serve in ogni repository
+
+Lo verifica l'installazione (`prompt/installazione.md`, passo A) con l'account del
+proprietario. Il preflight della catena ricontrolla a ogni avvio ciò che il token di Actions
+può vedere: segreto di Claude, token della App, environment, configurazione, workflow della
+CI. L'auto-merge e, a seconda dei permessi, la policy dei rami li vede solo un
+amministratore.
 
 | Cosa | Dove | Nome |
 |---|---|---|
