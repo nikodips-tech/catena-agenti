@@ -37,9 +37,10 @@ La decisione è sempre leggibile dopo: nella PR o nella specifica.
 
 - La **CI** e i **controlli obbligatori** del ruleset.
 - L'**unione** (`unione.yml`): a CI verde, squash con il prefisso giusto, ramo cancellato,
-  staging. Vale per qualsiasi PR con `unione-automatica`, da qualunque corsia.
+  staging. Vale per qualsiasi PR verso `develop` con `unione-automatica`, da qualunque corsia.
 - Le **regole dei file protetti**.
-- **Mai in master da soli**: la PR verso `master` la unisce sempre il proprietario.
+- **Mai in master da soli**: la PR verso `master` (hotfix compresi) la unisce sempre il
+  proprietario; l'unione la salta anche se ha `unione-automatica`.
 
 ## Corsia diretta da una sessione: la procedura per Claude
 
@@ -49,8 +50,9 @@ La decisione è sempre leggibile dopo: nella PR o nella specifica.
 3. Modifica, test che servono, controlli locali se il progetto li prevede.
 4. Commit con il prefisso del release (`feat:`, `fix:`, `docs:`, `chore:`).
 5. PR verso `develop` (o `master`) con titolo prefissato, corpo come
-   `docs/esempi/pr-diretta.md`, etichette `task` (o `hotfix`) e `unione-automatica` se il
-   proprietario non ha chiesto di unirla lui.
+   `docs/esempi/pr-diretta.md`, etichetta `task` (o `hotfix`). Solo verso `develop` anche
+   `unione-automatica`, se il proprietario non ha chiesto di unirla lui; un hotfix lo unisce
+   sempre lui.
 6. Niente altro: la CI, l'unione, la release e lo staging fanno il resto.
 
 ## Corsia diretta da un'issue: cosa cambia nella catena

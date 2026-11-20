@@ -122,7 +122,8 @@ estranei`, `docs: #<issue>`.
 
 Da Claude Code o claude.ai, quando il criterio della corsia diretta vale, Claude fa la
 modifica su un ramo, apre la PR verso `develop` con etichetta `task` (o `hotfix` verso
-`master`) e, se il proprietario non dice altro, `unione-automatica`. Nel corpo: `Corsia:
+`master`) e, solo verso `develop` e se il proprietario non dice altro, `unione-automatica`:
+in `master` unisce sempre lui. Nel corpo: `Corsia:
 diretta` e il motivo. La CI e l'unione sono le stesse della catena. Niente issue.
 
 ## 8. File protetti
