@@ -27,7 +27,7 @@ Leggi <CARTELLA>/prompt/1-migrazione-nuovo-repo.md ed eseguilo in questo reposit
 Ricognizione, pulizia della vecchia parte Claude, fondamenta (CLAUDE.md, CI, etichette,
 ruleset, staging), collegamento alla catena, verifica, resoconto.
 
-## 2. Un progetto già migrato con il vecchio metodo (cineNight)
+## 2. Un progetto già migrato con il vecchio metodo
 
 Sessione aperta **nella cartella del repository del progetto**:
 
@@ -41,6 +41,6 @@ pulizie.
 
 ## Dopo
 
-La prova vera la fai tu: una issue piccola e reale con `task`, poi `auto`. Prima su cineNight,
+La prova vera la fai tu: una issue piccola e reale con `task`, poi `auto`. Prima sul progetto pilota,
 poi sugli altri. Se qualcosa non va, la correzione si fa nel repository della catena e si
 ripubblica il tag (`README.md` della catena, sezione Versioni): nessun progetto va ritoccato.

@@ -1,6 +1,6 @@
 {
   "name": "catena-agenti",
-  "owner": { "name": "Nicola Di Pietro" },
+  "owner": { "name": "nikodips-tech" },
   "description": "Il marketplace della catena di agenti: il plugin guardia, che protegge le sessioni di Claude Code.",
   "plugins": [
     {

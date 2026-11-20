@@ -4,7 +4,9 @@
 # applica queste regole:
 #   1. git push ovunque, tranne: force, push su master, push di tag, cancellazione di master o develop;
 #   2. gh api: niente approvazione dei deployment né modifiche a environments e rulesets;
-#   3. niente merge in master nei repo di produzione (config/produzione.txt). Prima il repo (da
+#   3. niente merge in master nei repo di produzione (elenco personale, fuori dal repo:
+#      ~/.claude/guardia/produzione.txt o $GUARDIA_PRODUZIONE; senza elenco tutti i repo lo
+#      sono). Prima il repo (da
 #      -R, dall'URL o dalla cartella): se non è di produzione il merge è libero. Se lo è (o non si
 #      sa), gh pr merge chiede a GitHub la base e blocca master, main o una base sconosciuta; il
 #      merge via gh api (pulls/N/merge, merges, graphql) si blocca sempre;
@@ -48,10 +50,9 @@ gh_qui() {
   ( cd "$cartella" 2>/dev/null || exit 1; gh "$@" 2>/dev/null )
 }
 
-REGOLA_MASTER="Nei repo di produzione (plugin/config/produzione.txt di catena-agenti) il merge in master è il rilascio: lo fa sempre Nicola. Negli altri repo Claude può unire anche in master."
-
 # Repo in cui master è produzione (minuscolo, uno per riga). Senza il file vale per tutti.
-elenco_produzione="$(dirname "$0")/../config/produzione.txt"
+elenco_produzione=${GUARDIA_PRODUZIONE:-$HOME/.claude/guardia/produzione.txt}
+REGOLA_MASTER="Nei repo di produzione (elenco in $elenco_produzione) il merge in master è il rilascio: lo fa sempre il proprietario. Negli altri repo Claude può unire anche in master."
 if [ -r "$elenco_produzione" ]; then
   produzione=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$elenco_produzione" | grep -v '^$' | tr 'A-Z' 'a-z')
 else
@@ -166,7 +167,7 @@ while IFS= read -r seg; do
 
   case "$cmd" in
     ssh|scp|sftp|ssh-copy-id)
-      blocca "$cmd. Claude non entra nei server: prepara i comandi, li esegue Nicola." ;;
+      blocca "$cmd. Claude non entra nei server: prepara i comandi, li esegue il proprietario." ;;
   esac
 
   if [ "$cmd" = "git" ] && [ $# -ge 2 ]; then
@@ -181,7 +182,7 @@ while IFS= read -r seg; do
     done
     if [ "${1:-}" = "push" ]; then
       shift
-      REGOLA="Claude ha pieni poteri su git, tranne force, push su master, push di tag e cancellazione di master o develop: quelli li fa Nicola (i tag li crea la CI)."
+      REGOLA="Claude ha pieni poteri su git, tranne force, push su master, push di tag e cancellazione di master o develop: quelli li fa il proprietario (i tag li crea la CI)."
       cancella=0
       for a in "$@"; do
         case "$a" in
@@ -237,7 +238,7 @@ while IFS= read -r seg; do
   fi
 
   if [ "$cmd" = "gh" ] && [ "${2:-}" = "api" ]; then
-    REGOLA_GH="La produzione la approva Nicola: niente approvazione dei deployment né modifiche a environment e ruleset."
+    REGOLA_GH="La produzione la approva il proprietario: niente approvazione dei deployment né modifiche a environment e ruleset."
     if printf ' %s ' "$seg" | grep -qE 'pending_deployments|deployment_protection_rules'; then
       blocca "gh api su pending_deployments o deployment_protection_rules. $REGOLA_GH"
     fi

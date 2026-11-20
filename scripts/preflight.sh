@@ -41,7 +41,7 @@ problemi=()
 crea_etichette || problemi+=("Non riesco a creare le etichette della catena (serve issues: write)")
 
 [ "${CLAUDE_TOKEN_PRESENTE:-false}" = true ] || problemi+=("Manca il segreto \`CLAUDE_CODE_OAUTH_TOKEN\` nel repository")
-[ "${APP_OK:-no}" = si ] || problemi+=("Il token della App \`dipstech-agenti\` non si ottiene: controlla l'environment \`agenti\` (variabile \`AGENTI_CLIENT_ID\`, segreto \`AGENTI_APP_KEY\`, policy dei rami che ammette \`$RAMO_SVILUPPO\`) e che la App sia installata sul repository")
+[ "${APP_OK:-no}" = si ] || problemi+=("Il token della App della catena non si ottiene: controlla l'environment \`agenti\` (variabile \`AGENTI_CLIENT_ID\`, segreto \`AGENTI_APP_KEY\`, policy dei rami che ammette \`$RAMO_SVILUPPO\`) e che la App sia installata sul repository")
 pf_environment_esiste agenti || problemi+=("Manca l'environment \`agenti\`")
 
 if [ ! -f "$CONFIG" ]; then

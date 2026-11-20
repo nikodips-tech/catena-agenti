@@ -1,7 +1,7 @@
 # Il flusso, passo per passo
 
 Chi fa cosa, con quale token, e quanto costa. `A` = token di Actions (sola lettura o scrittura
-secondo il job), `App` = token della App `dipstech-agenti`, `C` = Claude (costa token del
+secondo il job), `App` = token della App della catena, `C` = Claude (costa token del
 piano).
 
 ```

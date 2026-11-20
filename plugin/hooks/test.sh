@@ -8,17 +8,20 @@ guardia="$qui/../scripts/guardia.sh"
 ok=0; ko=0
 
 # gh finto: risponde alle domande dell'hook (base e URL della PR, nome del repo) senza GitHub.
-# "prod" o la PR 200: master di livegest (produzione); "rel" o la PR 100: master di r (non di
+# "prod" o la PR 200: master di prod-uno (produzione); "rel" o la PR 100: master di r (non di
 # produzione); "sconosciuta" o 999: errore; altrimenti develop. repo view: il nome della cartella.
 finto=$(mktemp -d)
 trap 'rm -rf "$finto"' EXIT
-mkdir -p "$finto/livegest" "$finto/altro"
+mkdir -p "$finto/prod-uno" "$finto/altro"
+# L'elenco dei repo di produzione dei test (quello vero sta in ~/.claude, fuori dal repo)
+printf '# di prova\nProdDue\nprod-uno\n' > "$finto/produzione.txt"
+export GUARDIA_PRODUZIONE="$finto/produzione.txt"
 cat > "$finto/gh" <<'GH'
 #!/usr/bin/env bash
 case " $* " in
   *' repo view '*) basename "$PWD" ;;
   *sconosciuta*|*999*) exit 1 ;;
-  *prod*|*' 200 '*|*/200' '*|*pulls/200*) echo "master https://github.com/o/livegest/pull/200" ;;
+  *prod*|*' 200 '*|*/200' '*|*pulls/200*) echo "master https://github.com/o/prod-uno/pull/200" ;;
   *rel*|*' 100 '*|*/100' '*|*pulls/100*) echo "master https://github.com/o/r/pull/100" ;;
   *) echo "develop https://github.com/o/r/pull/12" ;;
 esac
@@ -43,8 +46,8 @@ prova() {
     ko=$((ko + 1)); printf 'FAIL (atteso %s, avuto %s) %s\n     %s\n' "$atteso" "$esito" "$comando" "$msg"
   fi
 }
-# prod: lo stesso, con il comando lanciato nella cartella di un repo di produzione (livegest)
-prod() { CWD="$finto/livegest" prova "$@"; }
+# prod: lo stesso, con il comando lanciato nella cartella di un repo di produzione (prod-uno)
+prod() { CWD="$finto/prod-uno" prova "$@"; }
 
 echo "--- git push: consentiti"
 prova 0 'git status'
@@ -114,28 +117,28 @@ prova 0 'gh pr merge 100 --merge'
 prova 0 'gh pr merge release/1.2.0 --merge --delete-branch'
 prova 0 'gh pr merge https://github.com/o/r/pull/100'
 prova 0 'gh pr view 200'
-prova 0 'gh api repos/o/livegest/pulls/200/merge'
+prova 0 'gh api repos/o/prod-uno/pulls/200/merge'
 prova 0 'gh api -X PUT repos/o/r/pulls/12/merge -f merge_method=merge'
 prova 0 'gh api -X PUT repos/o/r/pulls/100/merge'
 prova 0 'gh api -X POST repos/o/r/merges -f base=develop -f head=feature/x'
-prova 0 'gh api -X POST repos/o/claude-config/merges -f base=master -f head=develop'
+prova 0 'gh api -X POST repos/o/altro/merges -f base=master -f head=develop'
 prova 0 "cd $finto/altro && gh api -X POST repos/{owner}/{repo}/merges -f base=master -f head=x"
 echo "--- merge: bloccati (master di un repo di produzione, o destinazione sconosciuta)"
 prod 2 'gh pr merge 200 --merge'
 prod 2 'gh pr merge prod/release --merge'
-prova 2 'gh pr merge https://github.com/o/livegest/pull/200'
-prova 2 'gh pr merge 200 --merge -R o/livegest'
+prova 2 'gh pr merge https://github.com/o/prod-uno/pull/200'
+prova 2 'gh pr merge 200 --merge -R o/prod-uno'
 prod 2 'gh pr merge 200 --auto --merge'
 prod 2 'gh pr merge 999 --merge'
 prova 2 'cd /cartella/che/non/esiste && gh pr merge 12 --merge'
 prod 2 'npm test && gh pr merge 200 --merge'
-prova 2 'gh api -X PUT repos/o/livegest/pulls/200/merge'
-prova 2 'gh api --method PUT /repos/o/livegest/pulls/200/merge -f merge_method=squash'
-prova 2 'gh api -X PUT repos/o/livegest/pulls/12/merge'
-prova 2 'gh api -X POST repos/o/livegest/merges -f base=master -f head=develop'
-prova 2 'gh api repos/o/FantaFormula1/merges -f head=develop -f base=main'
-prova 2 'gh api repos/o/livegest/merges --input m.json'
-prova 2 "cd $finto/livegest && gh api -X POST repos/{owner}/{repo}/merges -f base=master -f head=x"
+prova 2 'gh api -X PUT repos/o/prod-uno/pulls/200/merge'
+prova 2 'gh api --method PUT /repos/o/prod-uno/pulls/200/merge -f merge_method=squash'
+prova 2 'gh api -X PUT repos/o/prod-uno/pulls/12/merge'
+prova 2 'gh api -X POST repos/o/prod-uno/merges -f base=master -f head=develop'
+prova 2 'gh api repos/o/ProdDue/merges -f head=develop -f base=main'
+prova 2 'gh api repos/o/prod-uno/merges --input m.json'
+prova 2 "cd $finto/prod-uno && gh api -X POST repos/{owner}/{repo}/merges -f base=master -f head=x"
 prova 2 'gh api graphql -f query="mutation{mergePullRequest(input:{pullRequestId:\"X\"}){clientMutationId}}"'
 prova 2 'gh api graphql -f query="mutation{enablePullRequestAutoMerge(input:{pullRequestId:\"X\"}){clientMutationId}}"'
 echo "--- comandi annidati"

@@ -21,7 +21,7 @@ identità, l'App.
 | Cosa | Dove | Nome |
 |---|---|---|
 | Token di Claude | Settings → Secrets → Actions | `CLAUDE_CODE_OAUTH_TOKEN` |
-| App installata | Settings → GitHub Apps | `dipstech-agenti`, con Contents e Pull requests in scrittura sul repo |
+| App installata | Settings → GitHub Apps | la GitHub App della catena (una tua, per esempio `<account>-agenti`), con Contents e Pull requests in scrittura sul repo |
 | Environment | Settings → Environments | `agenti`, deployment branch policy: `develop` |
 | Variabile dell'environment | nell'environment `agenti` | `AGENTI_CLIENT_ID` |
 | Segreto dell'environment | nell'environment `agenti` | `AGENTI_APP_KEY` (chiave privata PEM) |
@@ -44,7 +44,7 @@ gh api -X PUT repos/<owner>/<repo>/actions/permissions/workflow \
   -f default_workflow_permissions=read -F can_approve_pull_request_reviews=true
 ```
 L'installazione della App sul repository la fa il proprietario dall'interfaccia della App
-(Settings → Developer settings → GitHub Apps → dipstech-agenti → Install App → repository).
+(Settings → Developer settings → GitHub Apps → la tua App → Install App → repository).
 
 ### Permessi dei job
 

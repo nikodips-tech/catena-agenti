@@ -31,7 +31,7 @@ Prepara per te un quadro breve, che finirà nel resoconto.
 - "Allow GitHub Actions to create and approve pull requests".
 
 **Prerequisiti che richiedono l'utente** (`docs/permessi.md`, «Cosa serve in ogni
-repository»): segreto `CLAUDE_CODE_OAUTH_TOKEN`, App `dipstech-agenti` installata,
+repository»): segreto `CLAUDE_CODE_OAUTH_TOKEN`, App della catena installata,
 environment `agenti` con `AGENTI_CLIENT_ID` e `AGENTI_APP_KEY` e policy dei rami con
 `develop`. Se manca qualcosa, fermati e dagli l'elenco preciso con i comandi.
 
@@ -90,7 +90,7 @@ in `scripts/preflight.sh`.
 CI di questo repo. Mai e2e. Abilita "Allow GitHub Actions to create and approve pull requests".
 
 **Staging**: se il repo ha un workflow di staging, leggi quale variabile lo accende
-(in cineNight `STAGING_AUTOMATICO=si`), impostala e lancia il workflow una volta a mano. Se
+(per esempio `STAGING_AUTOMATICO=si`), impostala e lancia il workflow una volta a mano. Se
 finisce rosso non ripararlo: riporta l'errore. Se il repo non ha staging, non crearlo.
 
 ## 4. Collegamento alla catena

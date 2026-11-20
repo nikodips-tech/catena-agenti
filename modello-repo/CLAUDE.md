@@ -25,7 +25,7 @@ docker compose exec app npm run test
   esplicitamente.
 - I test e2e non si scrivono e non si modificano.
 - Non unire mai nulla in `master`.
-- Non collegarsi al VPS o al mini PC.
+- Non collegarsi ai server (ssh, scp).
 - Non leggere né scrivere segreti e file `.env` veri (solo i `.example`).
 - Chiedere prima di: modifiche al database che cancellano o trasformano dati; modifiche a
   `.github/workflows`; modifiche a `CLAUDE.md`, `.claude/` e `.catena.yml`.

@@ -1,6 +1,6 @@
 # Fine di una release o di un hotfix, riutilizzabile (workflow_call), niente Claude: tag x.y.z,
 # issue della versione chiuse, master riportato in develop, ramo cancellato
-# (scripts/rilascio/tag-master.sh, docs/rilascio.md). Con l'App dipstech-agenti (environment
+# (scripts/rilascio/tag-master.sh, docs/rilascio.md). Con l'App della catena (environment
 # `agenti`): il push del tag fatto dall'App fa partire il rilascio del progetto, quello del
 # token di Actions no. Il progetto lo chiama su push a master (l'environment accetta solo
 # develop e master, e un evento pull_request non è su master).
@@ -62,4 +62,5 @@ jobs:
       - name: Tag, issue, riporto in develop
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          APP_NOME: ${{ steps.app.outputs.app-slug }}
         run: bash "$CATENA/scripts/rilascio/tag-master.sh"

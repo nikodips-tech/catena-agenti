@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# La release (niente Claude), da release.yml di cineNight. A ogni push su develop, o a mano:
+# La release (niente Claude), dalla release del progetto pilota. A ogni push su develop, o a mano:
 # con commit feat o fix non ancora in master crea release/x.y.z dalla testa di develop e la
 # pull request verso master, con le note fatte dai commit; se una release è già aperta la
 # porta alla testa di develop (o la rinumera, se cambia la versione). Dopo un tag-master
@@ -68,9 +68,12 @@ cartella=$(cfg migrazioni)
     printf '> [!WARNING]\n> **Contiene migrazioni distruttive.** Prima di applicarle `rilascia` fa un dump del database; `torna` riporta il codice, il dump i dati.\n\n```\n%s\n```\n\n' "$distruttive"
   fi
   # Le issue in develop con un commento di una persona dopo l'ultimo di un bot: qualcosa che
-  # non va, o una domanda, ancora senza risposta
+  # non va, o una domanda, ancora senza risposta. I bot: github-actions e l'App della catena
+  # (APP_NOME, lo slug: nei commenti compare senza [bot]); lo slug ha solo [a-z0-9-]
+  bot='\\[bot\\]$|^github-actions$'   # dentro una stringa jq: \\[ è la parentesi letterale
+  [[ "${APP_NOME:-}" =~ ^[a-z0-9-]+$ ]] && bot+="|^$APP_NOME\$"
   senza_risposta=$(gh issue list --label "$E_IN_DEVELOP" --state open --limit 100 --json number,title,comments \
-    --jq '.[] | select((.comments | last | .author.login // "") as $a | $a != "" and ($a | test("\\[bot\\]$|^dipstech-agenti$|^github-actions$") | not)) | "- #\(.number) \(.title)"' || true)
+    --jq '.[] | select((.comments | last | .author.login // "") as $a | $a != "" and ($a | test("'"$bot"'") | not)) | "- #\(.number) \(.title)"' || true)
   if [ -n "$senza_risposta" ]; then
     printf '> [!IMPORTANT]\n> **Issue in develop con un commento senza risposta**: vanno guardate prima di rilasciare.\n\n%s\n\n' "$senza_risposta"
   fi

@@ -1,5 +1,5 @@
 # .catena.yml per un progetto Node (Nuxt/Vue + Vitest + ESLint + Prettier) con l'app in app/,
-# controlli nello stesso container della CI (node:22-alpine). È la configurazione di cineNight.
+# controlli nello stesso container della CI (node:22-alpine). Viene da un progetto Nuxt reale.
 
 ramo_sviluppo: develop
 ramo_produzione: master
@@ -15,7 +15,7 @@ installato_se: node_modules
 lint: npm run -s lint -- --quiet && npm run -s format:check
 tipi: npm run -s typecheck
 test: npm test -s -- --reporter=dot
-# La CI di cineNight non esegue test:db: la catena nemmeno. Se un giorno li esegue:
+# La CI del progetto non esegue test:db: la catena nemmeno. Se un giorno li esegue:
 # test_db: npm run -s test:db
 # db_avvia: docker compose -f docker-compose.ci.yaml up -d --wait db
 # db_ferma: docker compose -f docker-compose.ci.yaml down -v

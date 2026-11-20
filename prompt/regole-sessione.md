@@ -36,7 +36,7 @@ Fermati, scrivi il motivo e cosa servirebbe, senza improvvisare, se:
 3. Il progetto non ha nessun framework di test unitari: introdurlo è una decisione dell'utente.
 4. Manca un prerequisito che richiede le mani dell'utente (`docs/permessi.md`, «Cosa serve in
    ogni repository»).
-5. Una modifica richiederebbe di cambiare i permessi della App `dipstech-agenti` o la policy
+5. Una modifica richiederebbe di cambiare i permessi della App della catena o la policy
    di un environment.
 
 ## Resoconto finale (breve, a elenco)
