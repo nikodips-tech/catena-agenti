@@ -40,7 +40,7 @@ argomenti e formati di uscita (JSON con le chiavi indicate). L'elenco è
 | Issue | `pf_issue_titolo`, `pf_issue_corpo`, `pf_issue_stato` (OPEN/CLOSED), `pf_issue_etichette` (spazi), `pf_issue_aggiornata` (ISO), `pf_issue_commenti` (JSON `[{autore, corpo}]`), `pf_issue_commenta`, `pf_commenta_testo`, `pf_etichetta_aggiungi`, `pf_etichetta_togli`, `pf_issue_chiudi`, `pf_issue_crea` (→ numero), `pf_issue_aperte_con` (JSON `[{numero, etichette, aggiornata}]`) |
 | Sotto-issue | `pf_sottoissue_collega`, `pf_sottoissue` (JSON `[{numero, stato, titolo}]`), `pf_sottoissue_aperte` |
 | Passi | `pf_passo_avvia <passo> <issue> [sottotask] [tentativo] [file nota]`, `pf_workflow_avvia`, `pf_esecuzioni_attive` |
-| Rami e PR | `pf_ramo_esiste`, `pf_ramo_cancella`, `pf_push`, `pf_pr_aperta` (JSON `{numero, sha, etichette}`), `pf_pr_apri` (→ numero), `pf_pr_etichetta_aggiungi/togli`, `pf_pr_commenta`, `pf_pr_unisci`, `pf_pr_json` |
+| Rami e PR | `pf_ramo_esiste`, `pf_ramo_cancella`, `pf_push`, `pf_pr_aperta` (JSON `{numero, sha, etichette}`), `pf_pr_apri` (→ numero), `pf_pr_etichetta_aggiungi/togli`, `pf_pr_commenta`, `pf_pr_unisci` (squash o merge), `pf_pr_json` |
 | CI | `pf_ci_falliti`, `pf_ci_log_falliti` |
 | Repository | `pf_etichetta_crea`, `pf_etichette_repo`, `pf_controlli_obbligatori`, `pf_environment_esiste`, `pf_variabile` |
 

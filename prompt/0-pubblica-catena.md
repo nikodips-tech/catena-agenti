@@ -17,7 +17,7 @@ Leggi prima `prompt/regole-sessione.md`. Qui l'unica eccezione alle regole: ques
 ## 2. Repository
 
 ```bash
-git init -b main
+git init -b master
 git add -A
 git commit -m "Catena di agenti v1"
 gh repo create nikodips-tech/catena-agenti --public --source . --push \
@@ -37,12 +37,12 @@ e scrivi nel resoconto che ogni progetto avrà bisogno del segreto `CATENA_TOKEN
 
 ## 3. Protezione minima
 
-Ruleset su `main`: cancellazione e force push vietati, bypass admin. Niente PR obbligatoria:
+Ruleset su `master`: cancellazione e force push vietati, bypass admin. Niente PR obbligatoria:
 le correzioni alla catena si fanno in sessione con l'utente.
 
 ```bash
 gh api -X POST repos/nikodips-tech/catena-agenti/rulesets --input - <<'JSON'
-{ "name": "main", "target": "branch", "enforcement": "active",
+{ "name": "master", "target": "branch", "enforcement": "active",
   "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
   "bypass_actors": [ { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" } ],
   "rules": [ { "type": "deletion" }, { "type": "non_fast_forward" } ] }

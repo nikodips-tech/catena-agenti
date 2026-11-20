@@ -37,7 +37,9 @@ if [ "$ESITO" = success ]; then
   soggetto=$(titolo_squash "$titolo" "$tipo" "$issue")
   # Il riferimento all'issue nel messaggio dello squash: lo cerca il rilascio per chiuderla
   corpo=""; [ -z "$issue" ] || corpo=$(riferimento_issue "$issue" "$base")
-  if pf_pr_unisci "$numero" "$soggetto" "$corpo"; then
+  # In develop squash; in master sempre un merge commit (docs/rilascio.md)
+  metodo=squash; [ "$base" != "$RAMO_PRODUZIONE" ] || metodo=merge
+  if pf_pr_unisci "$numero" "$metodo" "$soggetto" "$corpo"; then
     dove="Unita in \`$base\`"
     variabile=$(cfg staging_variabile); workflow_staging=$(cfg staging_workflow)
     if [ -n "$variabile" ] && [ "$base" = "$RAMO_SVILUPPO" ]; then

@@ -34,6 +34,11 @@ if [ "${EVENTO:-}" = workflow_run ]; then
 else
   origine="origin/$RAMO_SVILUPPO"
 fi
+# Gli stessi file di master (dopo il riporto, o dopo una release unita con squash): niente
+# da rilasciare, qualunque cosa dicano i commit
+if git diff --quiet "origin/$RAMO_PRODUZIONE" "$origine"; then
+  echo "Nessuna differenza tra $RAMO_PRODUZIONE e $origine: niente da rilasciare." >> "$riepilogo"; exit 0
+fi
 
 ultimo=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
 ultimo=${ultimo:-0.0.0}

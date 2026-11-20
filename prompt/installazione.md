@@ -77,8 +77,10 @@ Le crea il preflight della catena al primo avvio. Anticipale:
 Ruleset `develop` e `master` da `docs/esempi/ruleset-*.json`, con i `context` dei check della
 CI condivisa **come compaiono sulla PR del passo B**: `ci / lint`, `ci / tipi`, `ci / test`,
 `ci / migrazioni`, `ci / build <servizio>` per ogni immagine, `ci / test-db` se configurato.
-Mai e2e. Se i ruleset esistono, aggiorna solo i `context`. Un check richiesto che non esiste
-blocca ogni PR per sempre: confronta con `gh pr checks`.
+Mai e2e. Se i ruleset esistono, aggiorna solo i `context` e, in quello di `master`,
+`allowed_merge_methods: ["merge"]` nella regola `pull_request`: in master si entra solo con un
+merge commit (`docs/rilascio.md`). Un check richiesto che non esiste blocca ogni PR per
+sempre: confronta con `gh pr checks`.
 
 ## H. Staging
 
@@ -91,7 +93,7 @@ il workflow una volta a mano. Rosso: non ripararlo, riporta l'errore. Senza stag
 1. La PR `catena` unita in develop con i check verdi, ramo cancellato.
 2. I ruleset richiedono solo check che la PR ha davvero prodotto.
 3. `gh workflow list`: `Catena`, `CI`, `Release`, `Tag master`, `In develop` attivi; nessun
-   altro workflow di Claude o del vecchio metodo.
+   altro workflow di Claude o del vecchio metodo. Uno disattivato: `gh workflow enable`.
 4. Nessun file rimasto cita file, etichette o workflow che non esistono più (`grep`).
 5. Le nove etichette esistono. Nessun ramo remoto oltre a develop, master ed eventuale release.
 6. Non hai messo `auto` e non hai lanciato nessun workflow della catena.

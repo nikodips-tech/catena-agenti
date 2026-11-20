@@ -46,7 +46,12 @@ variabili, l'environment `agenti`. Sono del progetto, la catena non li sostituis
 release aperta resta: la nuova `Release` la riconosce dal nome del ramo.
 
 Sequenza:
-1. `gh workflow disable` su ogni workflow da cancellare.
+1. `gh workflow disable` su ogni workflow da cancellare, **tranne** quelli con lo stesso
+   percorso di un file che l'installazione ricrea (`catena.yml`, `ci.yml`, `release.yml`,
+   `tag-master.yml`, `in-develop.yml`): GitHub ricorda lo stato per percorso, il file
+   ricreato resterebbe disattivato e sulla PR `catena` la CI non partirebbe (`gh workflow
+   enable` non funziona finché il file non torna sul ramo predefinito). Quelli si cancellano
+   soltanto, nella PR di pulizia.
 2. Svuota i controlli obbligatori dei ruleset `develop` e `master` (li rimetterai al passo G
    dell'installazione con i nomi nuovi). Tieni il resto dei ruleset.
 3. Ramo `pulizia` da develop: cancella i file; nei workflow rimasti togli i riferimenti a
