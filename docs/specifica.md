@@ -95,7 +95,8 @@ estranei`, `docs: #<issue>`.
 6. **Chiusura**: PR aperta dall'App (la CI parte). `unione-automatica` solo per i `task`
    approvati. Hotfix e riserve: la PR la unisce il proprietario.
 7. **Unione**: a CI verde squash con il prefisso del release (`feat:`/`fix:`), ramo
-   cancellato, issue chiusa, staging; a CI rossa una riparazione, poi `bloccato`. Poi la coda.
+   cancellato, issue chiusa (o `in-develop` fino al rilascio, con `chiudi_issue: produzione`),
+   staging; a CI rossa una riparazione, poi `bloccato`. Poi la coda.
 8. **PR chiusa a mano**: ordine sull'issue, ramo cancellato, coda.
 9. **Guardiano** (ogni ora): issue `in-corso` ferme da più di 90 minuti senza esecuzioni
    attive → ripartenza; niente in corso → coda.

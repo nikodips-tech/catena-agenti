@@ -35,6 +35,7 @@ T_PR_PRONTA="## Pull request pronta"
 # Etichette
 E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto
 E_IN_CORSO=in-corso; E_DOMANDA=domanda; E_BLOCCATO=bloccato; E_UNIONE=unione-automatica
+E_IN_DEVELOP=in-develop
 
 # Tetti
 MAX_TENTATIVI=3        # tentativi del developer per sottotask
@@ -61,6 +62,9 @@ RE_PROTETTI='^(\.github/|\.gitlab-ci|\.gitlab/|\.claude/)|(^|/)CLAUDE\.md$|(^|/)
 [ -z "$(cfg file_protetti)" ] || RE_PROTETTI="$RE_PROTETTI|$(cfg file_protetti)"
 RE_DOCS=$(cfg docs '^docs/|^README\.md$')
 WORKFLOW_CATENA=$(cfg workflow_catena catena.yml)
+# unione: l'issue si chiude quando la PR entra nella base; produzione: entrata in develop
+# resta aperta con `in-develop` e la chiude il rilascio (tag-master del progetto)
+CHIUDI_ISSUE=$(cfg chiudi_issue unione)
 
 # ---------------------------------------------------------------- utilità
 avviso() { echo "::warning::$*" >&2; }
@@ -115,6 +119,26 @@ commento_con_titolo() { pf_issue_commenti "$1" | jq -r --arg t "$2" '[.[] | sele
 conta_commenti() {
   local issue=$1; shift
   pf_issue_commenti "$issue" | jq -r --args '[.[] | select(.corpo as $c | $ARGS.positional | any(. as $t | $c | startswith($t)))] | length' "$@"
+}
+
+# aspetta_produzione <base>: vero se l'issue, unita in quella base, resta aperta fino al rilascio
+aspetta_produzione() { [ "$CHIUDI_ISSUE" = produzione ] && [ "$1" = "$RAMO_SVILUPPO" ]; }
+
+# riferimento_issue <issue> <base>: la riga per PR e commit. "Closes" in develop (ramo
+# predefinito) farebbe chiudere l'issue a GitHub; "Refs" la lascia aperta per il rilascio
+riferimento_issue() { if aspetta_produzione "$2"; then echo "Refs #$1"; else echo "Closes #$1"; fi; }
+
+# issue_unita <issue> <base> <testo>: l'issue dopo l'unione: chiusa, oppure aperta con
+# `in-develop` fino al rilascio; via `in-corso` e `domanda`
+issue_unita() {
+  if aspetta_produzione "$2"; then
+    pf_commenta_testo "$1" "$3 Resta aperta finché non va in produzione: se qualcosa non va, scrivilo qui."
+    pf_etichetta_aggiungi "$1" "$E_IN_DEVELOP"
+  else
+    [ "$(pf_issue_stato "$1")" != OPEN ] || pf_issue_chiudi "$1"
+    pf_commenta_testo "$1" "$3"
+  fi
+  pf_etichetta_togli "$1" "$E_IN_CORSO,$E_DOMANDA"
 }
 
 # corsia_di <specifica>: diretta | completa (la riga "Corsia: diretta" nella specifica)

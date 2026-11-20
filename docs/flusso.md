@@ -80,7 +80,8 @@ Actions. Commento `## Pull request pronta`.
 
 ### Unione (`unione.sh`, App per il merge)
 Solo PR con `unione-automatica` e CI dell'ultimo commit. Verde: squash con titolo
-`<prefisso>: <titolo> (#issue)`, ramo cancellato, issue chiusa, commento, staging secondo
+`<prefisso>: <titolo> (#issue)`, ramo cancellato, issue chiusa (con `chiudi_issue:
+produzione` resta aperta con `in-develop` fino al rilascio), commento, staging secondo
 `.catena.yml`. Rosso: `## Riparazione 1` e developer sull'issue con job falliti e log; la
 seconda volta `bloccato`. Poi la coda.
 

@@ -88,7 +88,8 @@ modifiche dentro `docs/` e `README.md`; commit `docs: <titolo>` se c'è qualcosa
 ## 6. Pull request
 
 Push del ramo e `gh pr create` verso `develop` (o `master` per hotfix) con titolo prefissato
-(`feat:`/`fix:`), corpo con `Closes #n` se c'è l'issue, `Corsia:`, `Revisione:` e l'elenco dei
+(`feat:`/`fix:`), corpo con `Closes #n` se c'è l'issue (`Refs #n` se `.catena.yml` ha `chiudi_issue:
+produzione` e la PR va in `develop`: l'issue resta aperta fino al rilascio), `Corsia:`, `Revisione:` e l'elenco dei
 sottotask, etichetta `task` (o `hotfix`). `unione-automatica` solo se: task, revisione
 approvata o corsia diretta, e l'utente non ha chiesto di guardarla prima. La CI e l'unione
 sono le stesse della catena su GitHub.

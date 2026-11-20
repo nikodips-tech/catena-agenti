@@ -22,6 +22,7 @@ domanda	D93F0B	Serve una risposta del proprietario
 bloccato	000000	Errore di infrastruttura o tetto superato: serve una mano
 unione-automatica	1D76DB	A controlli verdi la pull request si unisce da sola
 FINE
+  [ "$CHIUDI_ISSUE" != produzione ] || printf '%s\t0075CA\tIn develop: si chiude quando va in produzione\n' "$E_IN_DEVELOP"
 }
 
 crea_etichette() {

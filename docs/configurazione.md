@@ -14,6 +14,7 @@ bene. Lo cambia solo il proprietario (è un file protetto per gli agenti). Esemp
 | `workflow_catena` | `catena.yml` | il file del wrapper, per `workflow_dispatch` |
 | `ci_nome` | `CI` | il `name:` del workflow della CI (lo aspetta `workflow_run`) |
 | `prefisso_task` / `prefisso_hotfix` | `feat` / `fix` | prefisso del commit squash per il release |
+| `chiudi_issue` | `unione` | `unione`: l'issue si chiude quando la PR entra nella base. `produzione`: entrata in develop resta aperta con `in-develop` (PR e squash con `Refs #n`, non `Closes`) e la chiude il rilascio del progetto; l'avvio la rifiuta |
 
 ## Comandi dei controlli
 
