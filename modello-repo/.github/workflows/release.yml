@@ -1,0 +1,24 @@
+# La release del progetto: quella della catena (docs/rilascio.md di nikodips-tech/catena-agenti).
+# A ogni push su develop prepara o aggiorna la PR release/x.y.z verso master; dopo Tag master
+# rimette in pari la release aperta. Il merge della release lo fa il proprietario.
+name: Release
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Tag master]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: nikodips-tech/catena-agenti/.github/workflows/release.yml@v1
+    secrets: inherit

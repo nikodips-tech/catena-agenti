@@ -101,6 +101,7 @@ Ramo `catena` da develop, una PR. Hai l'autorizzazione a creare questi file:
 |---|---|---|
 | `.github/workflows/catena.yml` | `modello-repo/.github/workflows/catena.yml` | nessuno, salvo `workflows: [CI]` se la CI ha un altro `name:` |
 | `.catena.yml` | `modello-repo/.catena.yml` (esempi in `docs/esempi/catena-*.yml`) | **tutti i comandi** come la CI, stesso container; `file_test`, `file_e2e` secondo dove stanno davvero; `framework_test`; `docs`; staging solo se esiste; `test_db` solo se la CI lo esegue |
+| `.github/workflows/release.yml`, `tag-master.yml`, `in-develop.yml` | `modello-repo/.github/workflows/` | al posto delle copie del progetto (`docs/rilascio.md`, «Passaggio»); `chiudi_issue: produzione` in `.catena.yml` |
 | `.github/ISSUE_TEMPLATE/task.yml`, `hotfix.yml` | `modello-repo/.github/ISSUE_TEMPLATE/` | nessuno |
 | `.github/pull_request_template.md` | `modello-repo/.github/` | nessuno |
 | `.claude/agents/product-owner.md` | `<CARTELLA>/agenti/product-owner.md` | la sezione «Fonti»: se il repo ha già `docs/visione.md`, roadmap o simili, indica quelli al posto di `docs/prodotto/*` |

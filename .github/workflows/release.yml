@@ -1,0 +1,66 @@
+# La release dei progetti, riutilizzabile (workflow_call), niente Claude: prepara o aggiorna la
+# PR release/x.y.z verso master (scripts/rilascio/release.sh, docs/rilascio.md). Lavora con
+# l'App dipstech-agenti (environment `agenti`): così la PR fa partire la CI e il ramo della
+# release può contenere modifiche a .github/workflows/.
+name: Catena release
+
+on:
+  workflow_call:
+    inputs:
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      AGENTI_APP_KEY:
+        required: true
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: agenti
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      EVENTO: ${{ github.event_name }}
+      PROPRIETARIO: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.AGENTI_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTI_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: read
+
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      # Sempre develop, con la sua .catena.yml: mai il codice di una feature
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          path: repo
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+          persist-credentials: false
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: bash "$CATENA/scripts/rilascio/release.sh"

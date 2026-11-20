@@ -1,0 +1,20 @@
+# Fine di una release o di un hotfix: quella della catena (docs/rilascio.md di
+# nikodips-tech/catena-agenti). Tag x.y.z (che fa partire il rilascio), issue della versione
+# chiuse, master riportato in develop.
+name: Tag master
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag-master
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    uses: nikodips-tech/catena-agenti/.github/workflows/tag-master.yml@v1
+    secrets: inherit

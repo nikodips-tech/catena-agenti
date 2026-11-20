@@ -1,0 +1,58 @@
+# Issue entrate in develop, riutilizzabile (workflow_call), niente Claude: le issue citate da
+# una PR unita in develop ricevono un commento e `in-develop`, e restano aperte fino al
+# rilascio (scripts/rilascio/in-develop.sh, docs/rilascio.md). Token di Actions: basta.
+name: Catena in develop
+
+on:
+  workflow_call:
+    inputs:
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  in-develop:
+    # Solo le PR unite davvero
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      PR: ${{ github.event.pull_request.number }}
+      RAMO: ${{ github.head_ref }}
+    steps:
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      # Solo la configurazione, da develop
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: develop
+          path: repo
+          sparse-checkout: .catena.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Commenta le issue citate
+        run: bash "$CATENA/scripts/rilascio/in-develop.sh"
