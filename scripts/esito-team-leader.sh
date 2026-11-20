@@ -104,9 +104,12 @@ if [ -n "$prima_di" ]; then
   pf_push --force "$ramo"
 fi
 
-# riformula: il sotto-task si chiude, al suo posto quelli nuovi
-pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
-pf_issue_chiudi "$SOTTOTASK" "Riformulato dal team leader in sotto-task più piccoli."
+# riformula: il sotto-task si chiude, al suo posto quelli nuovi. In corsia diretta il
+# "sotto-task" è l'issue principale: resta aperta e `in-corso`, i nuovi sono sue sub-issue
+if [ "$SOTTOTASK" != "$ISSUE" ]; then
+  pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
+  pf_issue_chiudi "$SOTTOTASK" "Riformulato dal team leader in sotto-task più piccoli."
+fi
 crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$TMP_BASE/sottotask.txt")
 # In corsia diretta la riformulazione porta nella corsia completa: lo dice una nuova specifica
 specifica=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA")
