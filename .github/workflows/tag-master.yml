@@ -1,0 +1,65 @@
+# Fine di una release o di un hotfix, riutilizzabile (workflow_call), niente Claude: tag x.y.z,
+# issue della versione chiuse, master riportato in develop, ramo cancellato
+# (scripts/rilascio/tag-master.sh, docs/rilascio.md). Con l'App dipstech-agenti (environment
+# `agenti`): il push del tag fatto dall'App fa partire il rilascio del progetto, quello del
+# token di Actions no. Il progetto lo chiama su push a master (l'environment accetta solo
+# develop e master, e un evento pull_request non è su master).
+name: Catena tag master
+
+on:
+  workflow_call:
+    inputs:
+      catena_repo:
+        type: string
+        default: nikodips-tech/catena-agenti
+    secrets:
+      AGENTI_APP_KEY:
+        required: true
+      CATENA_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: agenti
+    env:
+      CATENA: ${{ github.workspace }}/catena
+      REPO_DIR: ${{ github.workspace }}/repo
+      GH_REPO: ${{ github.repository }}
+      PIATTAFORMA: github
+      COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.AGENTI_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTI_APP_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - name: La catena
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.catena_repo }}
+          ref: ${{ github.job_workflow_sha }}
+          path: catena
+          token: ${{ secrets.CATENA_TOKEN || github.token }}
+          persist-credentials: false
+
+      # Con il token dell'App: il push del tag e la cancellazione del ramo sono suoi
+      - name: Il progetto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
+
+      - name: Tag, issue, riporto in develop
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: bash "$CATENA/scripts/rilascio/tag-master.sh"

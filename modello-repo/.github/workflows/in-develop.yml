@@ -1,0 +1,20 @@
+# Issue entrate in develop: quella della catena (docs/rilascio.md di
+# nikodips-tech/catena-agenti). Le issue citate (Refs #N) ricevono un commento e `in-develop`;
+# le chiude Tag master quando vanno in produzione.
+name: In develop
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  in-develop:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    uses: nikodips-tech/catena-agenti/.github/workflows/in-develop.yml@v1
