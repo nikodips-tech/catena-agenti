@@ -30,7 +30,7 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 | Ruolo | Modello | Turni | Timeout | Strumenti | Cosa produce |
 |---|---|---|---|---|---|
 | Team leader | opus | 30 | 20 min | Read, Glob, Grep, Write | `esito.json`: specifica + corsia + sottotask, o domanda; in escalation la decisione |
-| Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` | test e codice del sottotask, in TDD |
+| Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` e `rimuovi.sh` (cancella file normali, mai protetti, e2e o test della base) | test e codice del sottotask, in TDD |
 | Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi, più `proposte` di regole di progetto per il proprietario |
 | Editor | haiku | 15 | 15 min | Read, Glob, Grep, Write, Edit | documentazione |
 | Product owner | opus | — | — | lettura + gh issue | issue pronte; **fuori dai workflow** |
@@ -85,7 +85,8 @@ estranei`, `docs: #<issue>`.
 2. **Team leader**: specifica + corsia. Diretta → developer sull'issue. Completa →
    sub-issue, poi la prima.
 3. **Developer**, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
-   codice; lo script ripristina i file protetti e i test della base toccati senza permesso
+   codice; i file da togliere li cancella con `rimuovi.sh`, e il revisore li vede nel diff. Lo
+   script ripristina i file protetti e i test della base toccati senza permesso
    (`Test modificabili:` del sotto-task), formatta tutto il
    ramo, esegue lint, tipi, test (e test con database) come la CI. Verde → un commit,
    sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con l'errore e il

@@ -9,8 +9,8 @@ quattro sottoagenti sottili (`modello-repo/.claude/agents/catena-*.md`).
 
 - I sottoagenti non contengono i prompt: hanno solo il frontmatter (modello, strumenti) e una
   riga che dice "leggi le istruzioni nel file indicato". La skill scarica `agenti/*.md` e
-  `scripts/controlli.sh` dal repository della catena al tag `v1` in una cartella temporanea,
-  all'inizio del giro. La fonte resta una sola.
+  `scripts/controlli.sh` e `scripts/rimuovi.sh` dal repository della catena al tag `v1` in una
+  cartella temporanea, all'inizio del giro. La fonte resta una sola.
 - La skill fa ciò che su GitHub fanno `avvio.sh` e gli `esito-*.sh`: ramo, ordine dei passi,
   ripristino dei file protetti, formattazione, controlli, commit, PR. Niente App, niente
   artifact: git e gh li ha l'orchestratore.
@@ -44,4 +44,4 @@ quattro sottoagenti sottili (`modello-repo/.claude/agents/catena-*.md`).
 
 I prompt di migrazione copiano skill e agenti da `modello-repo/.claude/`. Il frontmatter dei
 sottoagenti (`tools`, `model`) è la sola cosa che un progetto può voler adattare, per esempio
-il pattern di `Bash` del developer se `controlli.sh` sta in un percorso diverso.
+i pattern di `Bash` del developer se `controlli.sh` e `rimuovi.sh` stanno in un percorso diverso.

@@ -90,6 +90,6 @@ for i in $(seq 0 $((n - 1))); do
   numero=$(pf_issue_crea "$(jq -r ".sottotask[$i].titolo" "$f")" "$TMP_BASE/corpo.md" "$E_SOTTOTASK")
   pf_sottoissue_collega "$ISSUE" "$numero"
 done
-prima=$(pf_sottoissue_aperte "$ISSUE" | head -1)
+prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 printf '%s\n\n%s%s\n\nRiparte dal sotto-task #%s.\n\n_%s_\n' "$T_REV_SOTTOTASK" "$nota" "$rapporto" "$prima" "$cons" | pf_issue_commenta "$ISSUE" -
 pf_passo_avvia developer "$ISSUE" "$prima" 1

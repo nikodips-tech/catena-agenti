@@ -9,7 +9,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 ruolo=$1 cosa=$2
 case "$ruolo" in
   team-leader) modello=opus;   turni=30; timeout=20; strumenti="Read,Glob,Grep,Write" ;;
-  developer)   modello=sonnet; turni=70; timeout=55; strumenti="Read,Glob,Grep,Write,Edit,Bash(bash $CATENA/scripts/controlli.sh:*)" ;;
+  developer)   modello=sonnet; turni=70; timeout=55; strumenti="Read,Glob,Grep,Write,Edit,Bash(bash $CATENA/scripts/controlli.sh:*),Bash(bash $CATENA/scripts/rimuovi.sh:*)" ;;
   revisore)    modello=opus;   turni=30; timeout=25; strumenti="Read,Glob,Grep,Write" ;;
   editor)      modello=haiku;  turni=15; timeout=15; strumenti="Read,Glob,Grep,Write,Edit" ;;
   *) errore "ruolo sconosciuto: $ruolo"; exit 2 ;;

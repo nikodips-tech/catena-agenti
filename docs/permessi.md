@@ -4,7 +4,7 @@
 
 | Chi | Deve poter | Non deve poter |
 |---|---|---|
-| **Claude** (job agente) | leggere il checkout, scrivere file nel checkout, eseguire `controlli.sh` | leggere issue, usare git/gh/rete, vedere token o segreti |
+| **Claude** (job agente) | leggere il checkout, scrivere file nel checkout, eseguire `controlli.sh`; il developer anche `rimuovi.sh` (cancella file normali del repo, mai protetti, e2e o test della base) | leggere issue, usare git/gh/rete, vedere token o segreti |
 | **Script di esito** | leggere e scrivere issue, etichette, commenti; push sui rami `issue-*`; avviare il passo dopo | push su `develop`/`master`; unire PR |
 | **Identità "App"** | aprire PR, push che fanno partire la CI, unire PR in `develop` | leggere o scrivere issue (non serve e così non lo fa nessuno per sbaglio) |
 | **Proprietario** | mettere `auto`, rispondere alle domande, unire in `master`, cambiare `.github/`, `CLAUDE.md`, `.claude/` | — |
@@ -101,5 +101,7 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | In coda per minuti senza job | rallentamento di GitHub | il guardiano riparte; le annullate non scrivono |
 | Passo in errore su `--remove-label` | etichetta cancellata | `pf_etichetta_togli` ignora l'assenza, il preflight le crea |
 | Team leader in errore "Broken pipe" con più sotto-task | `crea_sottotask … \| head -1` con pipefail | i numeri su file, poi `head` |
+| Team leader che non parte, "esito.json non trovato" con un ramo grande | `git diff \| head -c` con pipefail: SIGPIPE, `contesto.sh` esce con 141 | `limita` legge tutto l'input dopo il taglio; niente `head` o `grep -q` in fondo a una pipe con pipefail |
+| Tipi rossi tre volte su un sotto-task che toglie file | il developer non poteva cancellare file della base | `rimuovi.sh` tra gli strumenti del developer |
 | Catena non trovata al checkout | repo della catena privato | pubblico, oppure `CATENA_TOKEN` |
 | Chiamata al workflow riutilizzabile rifiutata | accesso ai workflow del repo della catena | repo pubblico, oppure Settings → Actions → Access |

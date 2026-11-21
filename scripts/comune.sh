@@ -48,7 +48,7 @@ MAX_RIPARAZIONI=1      # riparazioni dopo una CI rossa
 cfg() {
   local v=""
   if [ -f "$CONFIG" ]; then
-    v=$(sed -n "s/^$1:[[:space:]]*//p" "$CONFIG" | head -1 | sed -E 's/[[:space:]]+#.*$//; s/^"(.*)"$/\1/; s/[[:space:]]+$//')
+    v=$(sed -n "s/^$1:[[:space:]]*//p" "$CONFIG" | sed -n 1p | sed -E 's/[[:space:]]+#.*$//; s/^"(.*)"$/\1/; s/[[:space:]]+$//')
   fi
   printf '%s' "${v:-${2:-}}"
 }
@@ -189,7 +189,9 @@ ramo_checkout() {
 commit_sul_ramo() {
   cd "$REPO_DIR"
   git show-ref -q --verify "refs/remotes/origin/$1" || return 1
-  git log --format=%s "origin/$3..origin/$1" | grep -qxF -- "$2"
+  # grep senza -q: con -q esce al primo riscontro, git log prende SIGPIPE e con pipefail
+  # la funzione direbbe "no" proprio quando il commit c'è
+  git log --format=%s "origin/$3..origin/$1" | grep -xF -- "$2" > /dev/null
 }
 
 # commit_prima_di <ramo> <issue o sottotask> <base>: il commit del ramo prima del primo commit
@@ -197,7 +199,7 @@ commit_sul_ramo() {
 commit_prima_di() {
   cd "$REPO_DIR"
   local primo
-  primo=$(git log --reverse --format='%H %s' "origin/$3..origin/$1" | grep -E " (wip|feat|fix|chore): #$2( |$)" | head -1 | cut -d' ' -f1)
+  primo=$(git log --reverse --format='%H %s' "origin/$3..origin/$1" | grep -E " (wip|feat|fix|chore): #$2( |$)" | sed -n 1p | cut -d' ' -f1)
   [ -n "$primo" ] && git rev-parse "$primo^"
 }
 

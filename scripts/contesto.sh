@@ -12,7 +12,9 @@ mkdir -p "$CONTESTO"; : > "$CONTESTO/descrizione.md"
 
 descrivi() { echo "- $CONTESTO/$1: $2" >> "$CONTESTO/descrizione.md"; }
 # limita <byte>: taglia i file grandi (un diff enorme costa token e non si legge comunque)
-limita() { head -c "$1"; }
+# head chiude la pipe dopo n byte: senza `cat` il comando a monte prende SIGPIPE e con
+# pipefail lo script esce con 141
+limita() { head -c "$1"; cat > /dev/null; }
 
 specifica() {
   commento_con_titolo "$ISSUE" "$T_SPECIFICA" > "$CONTESTO/specifica.md"
@@ -82,7 +84,7 @@ case "$ruolo" in
     } | sort -u > "$CONTESTO/test-modificabili.txt"
     descrivi test-modificabili.txt "i test che esistono già in $BASE e che puoi modificare (non cancellare); tutti gli altri test di $BASE non si toccano"
     nota_md errore.txt "le ultime righe dell'errore del tentativo precedente, o i controlli falliti della CI da riparare"
-    wip=$(git log --format=%s "origin/$BASE..HEAD" 2> /dev/null | grep -E "^wip: #$SOTTOTASK " | head -1 || true)
+    wip=$(git log --format=%s "origin/$BASE..HEAD" 2> /dev/null | grep -E "^wip: #$SOTTOTASK " | sed -n 1p || true)
     if [ -n "$wip" ]; then
       git log --format= --name-only --grep="^wip: #$SOTTOTASK " "origin/$BASE..HEAD" | grep -v '^$' | sort -u > "$CONTESTO/lavoro-precedente.txt"
       descrivi lavoro-precedente.txt "i file che il tentativo precedente ha già cambiato: il suo lavoro è già nel checkout, correggilo invece di rifarlo"
