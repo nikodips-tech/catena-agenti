@@ -30,8 +30,8 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 | Ruolo | Modello | Turni | Timeout | Strumenti | Cosa produce |
 |---|---|---|---|---|---|
 | Team leader | opus | 30 | 20 min | Read, Glob, Grep, Write | `esito.json`: specifica + corsia + sottotask, o domanda; in escalation la decisione |
-| Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` e `rimuovi.sh` (cancella file normali, mai protetti, e2e o test della base) | test e codice del sottotask, in TDD |
-| Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi, più `proposte` di regole di progetto per il proprietario |
+| Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` e `rimuovi.sh` (cancella file normali, mai protetti o e2e) | test e codice del sottotask, in TDD |
+| Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi / ripristina, più `proposte` di regole di progetto per il proprietario |
 | Editor | haiku | 15 | 15 min | Read, Glob, Grep, Write, Edit | documentazione |
 | Product owner | opus | — | — | lettura + gh issue | issue pronte; **fuori dai workflow** |
 
@@ -66,14 +66,15 @@ Lo stato di un'issue è nei suoi commenti, riconosciuti dal titolo con cui comin
 | `## Domanda` | issue | il team leader aspetta una risposta |
 | `## Revisione: approvata` | issue | si passa a editor e chiusura |
 | `## Revisione: sottotask aggiunti` / `## Revisione: file rimossi` | issue | un giro di revisione |
-| `## Revisione: con riserve` | issue | giri finiti: la PR si apre ma non si unisce da sola |
+| `## Revisione: con riserve` | issue | giri finiti: la PR si apre e si unisce da sola, con le riserve scritte |
 | `## Escalation` | sotto-task | il team leader è stato chiamato (al massimo una volta) |
 | `## Riparazione n` | issue | la CI della PR era rossa, il developer la ripara (al massimo una) |
 | `## Pull request pronta` | issue | la PR è aperta |
 
 Il ramo porta il resto: `wip: #<sottotask> tentativo k` (tentativo fallito del developer),
 `feat: #<n>` o `fix: #<n>` (sottotask finito, assorbe i wip), `chore: #<issue> rimozione file
-estranei`, `docs: #<issue>`.
+estranei`, `chore: #<issue> ripristino test`, `docs: #<issue>`. Il commit `feat:`/`fix:` porta nel
+corpo le note del developer e i test della base che ha toccato.
 
 ## 5. Il giro (docs/flusso.md per il dettaglio)
 
@@ -85,16 +86,22 @@ estranei`, `docs: #<issue>`.
 2. **Team leader**: specifica + corsia. Diretta → developer sull'issue. Completa →
    sub-issue, poi la prima.
 3. **Developer**, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
-   codice; i file da togliere li cancella con `rimuovi.sh`, e il revisore li vede nel diff. Lo
-   script ripristina i file protetti e i test della base toccati senza permesso
-   (`Test modificabili:` del sotto-task), formatta tutto il
-   ramo, esegue lint, tipi, test (e test con database) come la CI. Verde → un commit,
-   sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con l'errore e il
-   lavoro già fatto; al terzo → escalation.
-4. **Revisore**: approva, o aggiunge sotto-task / rimuove file (2 giri), poi riserve.
+   codice; i file da togliere li cancella con `rimuovi.sh`, e il revisore li vede nel diff. I
+   test della base li può modificare e cancellare se il sotto-task cambia o toglie il
+   comportamento che verificano, con il perché in `note-developer.md`. Lo script ripristina i
+   file protetti, gli e2e e i test bloccati dal revisore (`Test bloccati:` del sotto-task),
+   formatta tutto il ramo, esegue lint, tipi, test (e test con database) come la CI. Verde →
+   un commit, sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con
+   l'errore e il lavoro già fatto; al secondo → escalation.
+4. **Revisore**: approva, o aggiunge sotto-task / rimuove file / fa ripristinare test della
+   base (2 giri), poi riserve. Giudica i test della base modificati o cancellati con le note
+   del developer; `ripristina` rimette quei test come nella base e li blocca per i sotto-task
+   che seguono. In corsia diretta e dopo una riparazione parte solo se il developer ha
+   toccato test della base.
 5. **Editor**: solo documentazione; il resto si scarta con un avviso.
-6. **Chiusura**: PR aperta dall'App (la CI parte). `unione-automatica` solo per i `task`
-   approvati. Hotfix e riserve: la PR la unisce il proprietario.
+6. **Chiusura**: PR aperta dall'App (la CI parte). `unione-automatica` per ogni `task`, anche
+   con le riserve del revisore (restano scritte nella PR). Hotfix: la PR la unisce il
+   proprietario.
 7. **Unione**: a CI verde squash con il prefisso del release (`feat:`/`fix:`), ramo
    cancellato, issue chiusa (o `in-develop` fino al rilascio, con `chiudi_issue: produzione`),
    staging; a CI rossa una riparazione, poi `bloccato`. Poi la coda.
@@ -107,12 +114,12 @@ estranei`, `docs: #<issue>`.
 | Fallimento | Passo dopo |
 |---|---|
 | Agente tocca `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, `.env`, e2e | file ripristinati, avviso nel commento, si prosegue |
-| Developer modifica test della base non in `test_modificabili`, o ne cancella | ripristinati; i controlli decidono; se rossi, **escalation subito** |
-| Developer rosso (tentativo 1, 2) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
-| Developer rosso al tentativo 3 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
+| Developer tocca test della base bloccati dal revisore | ripristinati; i controlli decidono; se rossi, **escalation subito** |
+| Developer rosso (tentativo 1) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
+| Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
 | Escalation già fatta | `bloccato`, lavoro parziale sul ramo |
 | Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `bloccato` |
-| Revisore oltre 2 giri | riserve: PR senza unione automatica, `domanda` |
+| Revisore oltre 2 giri | riserve: la PR si unisce da sola, le riserve restano nella PR; interviene il proprietario solo al merge in master |
 | Editor fuori da docs | scartato, si prosegue |
 | CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `bloccato` |
 | Preflight fallito | `bloccato` con l'elenco esatto |
@@ -131,19 +138,19 @@ diretta` e il motivo. La CI e l'unione sono le stesse della catena. Niente issue
 
 Nessun agente può cambiare: `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
 `.catena.yml`, file `.env` (non `.example`), più `file_protetti` di `.catena.yml`. I test e2e
-non si scrivono né si modificano. I test che esistono già nella base il developer non li
-cancella e modifica solo quelli che il team leader (o il revisore) gli autorizza in
-`test_modificabili`. Le modifiche agli altri file protetti le propone una persona, in una PR
+non si scrivono né si modificano. I test che esistono già nella base il developer può
+modificarli e cancellarli (note di spiegazione, giudizio del revisore), tranne quelli che il
+revisore ha fatto ripristinare (`test_bloccati`). Le modifiche agli altri file protetti le propone una persona, in una PR
 normale. La raccolta gira nel job di Claude, che può scriverne i file di appoggio: per questo il
-job `esito` (con il token, senza Claude) ricalcola i permessi dall'issue e ricontrolla la
-patch. Una patch del developer che tocca file protetti, e2e o test della base senza permesso
+job `esito` (con il token, senza Claude) ricalcola i test bloccati dall'issue e ricontrolla la
+patch. Una patch del developer che tocca file protetti, e2e o test bloccati
 porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
 
 ## 9. Tetti
 
 | Tetto | Valore | Dove |
 |---|---|---|
-| Tentativi del developer per sottotask | 3 | `MAX_TENTATIVI` |
+| Tentativi del developer per sottotask | 2 | `MAX_TENTATIVI` |
 | Giri di revisione | 2 | `MAX_GIRI_REVISIONE` |
 | Escalation per sottotask | 1 | `MAX_ESCALATION` |
 | Riparazioni per PR | 1 | `MAX_RIPARAZIONI` |
@@ -153,13 +160,12 @@ porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
 
 ## 10. Quando la catena si ferma
 
-Per costruzione, la catena aspetta una persona solo in quattro casi:
+Per costruzione, la catena aspetta una persona solo in tre casi:
 
 | Fermata | Chi la toglie | Come |
 |---|---|---|
 | `domanda` del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
 | `bloccato` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema e rimette `auto` |
-| pull request con riserve del revisore | il proprietario | la unisce o la chiude |
 | pull request verso `master` (release, hotfix) | il proprietario | il merge è l'OK al rilascio |
 
 Tutto il resto riparte da solo: tentativi, escalation, riparazione della CI, coda, guardiano.
