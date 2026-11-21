@@ -69,7 +69,7 @@ if [ "$stato" != ok ]; then
 fi
 
 # Verde: un solo commit che assorbe i tentativi precedenti
-primo_wip=$(git log --reverse --format='%H %s' "origin/$base..HEAD" | grep -E " wip: #$SOTTOTASK " | head -1 | cut -d' ' -f1 || true)
+primo_wip=$(git log --reverse --format='%H %s' "origin/$base..HEAD" | grep -E " wip: #$SOTTOTASK " | sed -n 1p | cut -d' ' -f1 || true)
 forza=()
 if [ -n "$primo_wip" ]; then git reset -q --soft "$primo_wip^"; forza=(--force); fi
 git commit -q --allow-empty -m "$pref: #$SOTTOTASK"
@@ -85,7 +85,7 @@ pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
 { printf 'Fatto sul ramo `%s` in %s tentativo/i (%s).\n' "$ramo" "$TENTATIVO" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } > "$TMP_BASE/chiusura.md"
 pf_issue_chiudi "$SOTTOTASK" "$(cat "$TMP_BASE/chiusura.md")"
 
-prossimo=$(pf_sottoissue_aperte "$ISSUE" | head -1)
+prossimo=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ -n "$prossimo" ]; then
   pf_passo_avvia developer "$ISSUE" "$prossimo" 1
 else

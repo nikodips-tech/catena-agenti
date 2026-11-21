@@ -88,7 +88,7 @@ if [ "$(corsia_di "$specifica")" = diretta ]; then
   exit 0
 fi
 
-prima=$(pf_sottoissue_aperte "$ISSUE" | head -1)
+prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ -n "$prima" ]; then
   pf_passo_avvia developer "$ISSUE" "$prima" 1
 elif pf_ramo_esiste "$ramo"; then
