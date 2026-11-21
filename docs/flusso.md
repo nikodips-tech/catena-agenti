@@ -66,7 +66,11 @@ Per ogni sotto-task, in TDD: prima i test, eseguiti perché falliscano, poi il c
 tutti i controlli. I test che esistono già nella base non si cancellano e si modificano solo
 quelli che il team leader elenca nella riga `Test modificabili:` del sotto-task (in corsia
 diretta della specifica), più quelli già modificati sul ramo: gli altri lo script li
-ripristina. Quelli aggiunti sul ramo sono suoi. Con `Test: no` non scrive test. Verde: un
+ripristina. Quelli aggiunti sul ramo sono suoi. Con `Test: no` non scrive test. Strumenti:
+Read, Glob, Grep, Write, Edit, e Bash solo su `controlli.sh` e `rimuovi.sh`: con il secondo
+cancella i file che il sotto-task chiede di togliere (mai protetti, e2e o test della base),
+così rilancia subito i controlli; la cancellazione entra nel commit e il revisore la vede nel
+diff. Verde: un
 commit `feat: #n` che assorbe i tentativi precedenti. Rosso: il lavoro resta sul ramo come
 `wip: #n tentativo k`, il tentativo dopo riceve l'errore e corregge. Al terzo rosso,
 escalation al team leader; subito, se lo script ha ripristinato test della base (il

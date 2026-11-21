@@ -38,6 +38,8 @@ test e fai solo la modifica.
   falliscono, il team leader è chiamato subito e decide se autorizzarlo.
 - Nessun test spento (`skip`, `only`, `todo`) e nessun test senza asserzioni: il revisore li
   fa rimuovere.
+- I file che il sottotask chiede di togliere li cancelli con `rimuovi.sh` (il comando è nel
+  prompt), poi rilanci i controlli. I test della base non si cancellano mai.
 - I file di prova temporanei li cancelli prima di finire: ogni file che resta entra nel commit.
 - Non toccare `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, file `.env`, test e2e.
 - Non hai git né gh: il commit lo fa uno script.

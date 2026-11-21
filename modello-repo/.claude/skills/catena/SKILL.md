@@ -54,7 +54,9 @@ quello al primo livello) più quelli già modificati sul ramo
 
 **Developer**, fino a 3 tentativi: lancia `catena-developer` con `developer.md`,
 `specifica.md`, `sottotask.md`, l'elenco dei file di test aggiunti sul ramo,
-`test-modificabili.txt`, e dal secondo tentativo `errore.txt` con le ultime righe
+`test-modificabili.txt`, il comando per cancellare i file che il sottotask chiede di togliere
+(`bash $CATENA/scripts/rimuovi.sh <file…>`, con `BASE=develop` o `master`), e dal secondo
+tentativo `errore.txt` con le ultime righe
 dell'errore. Dopo ogni tentativo:
 1. ripristina file protetti ed e2e, e i test che esistono già in `develop` se li ha
    cancellati o modificati senza che siano in `test-modificabili.txt`
