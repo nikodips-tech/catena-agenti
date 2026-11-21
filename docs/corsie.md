@@ -58,8 +58,10 @@ La decisione è sempre leggibile dopo: nella PR o nella specifica.
 ## Corsia diretta da un'issue: cosa cambia nella catena
 
 - La specifica è breve e contiene la riga `Corsia: diretta`; nessuna sub-issue.
-- Il developer riceve l'issue come lavoro, scrive test e codice come sempre, ha i soliti 3
+- Il developer riceve l'issue come lavoro, scrive test e codice come sempre, ha i soliti 2
   tentativi.
-- Niente revisore né editor: la PR si apre subito, con `unione-automatica`.
-- Se il developer fallisce 3 volte, l'escalation al team leader può `riformula`re: la catena
+- Niente revisore né editor: la PR si apre subito, con `unione-automatica`. Eccezione: se il
+  developer ha modificato o cancellato test della base, prima della PR parte il revisore (che
+  giudica la modifica con le note del developer); vale anche dopo una riparazione della CI.
+- Se il developer fallisce 2 volte, l'escalation al team leader può `riformula`re: la catena
   passa alla corsia completa (nuova `## Specifica` con `Corsia: completa` e sub-issue).

@@ -10,13 +10,13 @@ proprietario ──auto──► AVVIO (A) ──► TEAM LEADER (C opus, poi A)
                                         │ corsia diretta ──────────────────────┐
                                         ▼ corsia completa                      │
                    ┌──► DEVELOPER (C sonnet, poi A): test, poi codice ◄── tentativo+1 (wip:)
-                   │        │ verde: feat: #n                                 │ rosso ×3
+                   │        │ verde: feat: #n                                 │ rosso ×2
                    │ prossimo sotto-task ◄──┤                                 ▼
                    │                        │ finiti        ESCALATION: TEAM LEADER (C opus)
                    │                        ▼                 riformula ──► sotto-task nuovi
                    │                 REVISORE (C opus, poi A)  bloccato ───► `bloccato`
-                   └── sotto-task / rimuovi (≤2) ◄──┤
-                                                    │ approvata / riserve
+                   └── sotto-task / rimuovi / ripristina (≤2) ◄──┤
+                                                    │ approvata / riserve (PR unita lo stesso)
                                                     ▼
                                              EDITOR (C haiku, poi A) ── docs: #n
                                                     ▼
@@ -42,7 +42,8 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
 |---|---|
 | nessuna `## Specifica` | team leader |
 | corsia diretta, nessun `feat: #issue` sul ramo | developer (sottotask = issue) |
-| corsia diretta, `feat: #issue` sul ramo | chiusura |
+| corsia diretta, `feat: #issue` sul ramo, nessun sotto-task aperto, e nessun test della base toccato o revisione già fatta | chiusura |
+| corsia diretta, `feat: #issue` sul ramo, con sotto-task aperti o test della base toccati senza revisione | come la corsia completa (sotto-task aperti → developer; ramo → revisore o chiusura) |
 | sotto-task aperti | developer sul primo |
 | nessun sotto-task aperto, ramo esistente, revisione approvata o con riserve | chiusura |
 | nessun sotto-task aperto, ramo esistente, senza revisione | revisore |
@@ -55,7 +56,7 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
    fuori dal repo; credenziali git tolte dal checkout; dipendenze installate (il loro output
    non entra nel contesto di Claude); `agente.sh` lancia la CLI senza nessun token di
    piattaforma nell'ambiente; `raccolta.sh` misura le modifiche rispetto al commit di
-   partenza, ripristina i file protetti e i test della base, scarta quelli fuori ambito,
+   partenza, ripristina i file protetti, gli e2e e i test bloccati dal revisore, scarta quelli fuori ambito,
    formatta, esegue i controlli (developer), scrive l'artifact `esito`.
 3. `esito` (A scrittura): `esito-<ruolo>.sh` applica la patch, committa, pusha, commenta,
    etichetta e avvia il passo dopo con `pf_passo_avvia` (un `workflow_dispatch` del wrapper
@@ -63,31 +64,36 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
 
 ### Developer
 Per ogni sotto-task, in TDD: prima i test, eseguiti perché falliscano, poi il codice, poi
-tutti i controlli. I test che esistono già nella base non si cancellano e si modificano solo
-quelli che il team leader elenca nella riga `Test modificabili:` del sotto-task (in corsia
-diretta della specifica), più quelli già modificati sul ramo: gli altri lo script li
-ripristina. Quelli aggiunti sul ramo sono suoi. Con `Test: no` non scrive test. Strumenti:
-Read, Glob, Grep, Write, Edit, e Bash solo su `controlli.sh` e `rimuovi.sh`: con il secondo
-cancella i file che il sotto-task chiede di togliere (mai protetti, e2e o test della base),
-così rilancia subito i controlli; la cancellazione entra nel commit e il revisore la vede nel
-diff. Verde: un
-commit `feat: #n` che assorbe i tentativi precedenti. Rosso: il lavoro resta sul ramo come
-`wip: #n tentativo k`, il tentativo dopo riceve l'errore e corregge. Al terzo rosso,
-escalation al team leader; subito, se lo script ha ripristinato test della base (il
-tentativo dopo rifarebbe la stessa modifica). Il revisore riceve l'elenco dei test della base
-modificati e controlla che non siano stati indeboliti.
+tutti i controlli. I test della base può modificarli e cancellarli se il sotto-task cambia o
+toglie il comportamento che verificano; il perché lo scrive in `note-developer.md` (la
+raccolta lo sposta fuori dal repo). Lo script ripristina solo gli e2e, i file protetti e i
+test che il revisore ha bloccato (riga `Test bloccati:` del sotto-task). Quelli aggiunti sul
+ramo sono suoi. Con `Test: no` non scrive test. Strumenti: Read, Glob, Grep, Write, Edit, e
+Bash solo su `controlli.sh` e `rimuovi.sh`: con il secondo cancella i file che il sotto-task
+chiede di togliere (mai protetti o e2e), così rilancia subito i controlli; la cancellazione
+entra nel commit e il revisore la vede nel diff. Verde: un commit `feat: #n` che assorbe i
+tentativi precedenti, con nel corpo note e test della base toccati; in corsia diretta e nelle
+riparazioni, se ha toccato test della base parte il revisore invece della chiusura. Rosso: il
+lavoro resta sul ramo come `wip: #n tentativo k`, il tentativo dopo riceve l'errore e
+corregge. Al secondo rosso, escalation al team leader; subito, se lo script ha ripristinato
+test bloccati (il tentativo dopo rifarebbe la stessa modifica). Il revisore riceve i test
+della base modificati (M) o cancellati (D) e le note, e li giudica; con `ripristina` lo script
+li rimette come nella base e li blocca per i sotto-task che seguono.
 
 ### Chiusura (`chiusura.sh`, App)
 PR dal ramo alla base, aperta dall'App: la CI parte da sola (con il token di Actions no). PR
 già aperta: commit vuoto dell'App per rilanciare la CI. Etichette sulla PR con il token di
-Actions. Commento `## Pull request pronta`.
+Actions. Commento `## Pull request pronta`. Con le riserve del revisore la PR si unisce lo
+stesso (task): le riserve sono in fondo al corpo della PR e il proprietario le guarda prima del
+passaggio in master. Gli hotfix li unisce lui.
 
 ### Unione (`unione.sh`, App per il merge)
 Solo PR con `unione-automatica` e CI dell'ultimo commit. Verde: squash con titolo
 `<prefisso>: <titolo> (#issue)`, ramo cancellato, issue chiusa (con `chiudi_issue:
 produzione` resta aperta con `in-develop` fino al rilascio), commento, staging secondo
 `.catena.yml`. Rosso: `## Riparazione 1` e developer sull'issue con job falliti e log; la
-seconda volta `bloccato`. Poi la coda.
+seconda volta `bloccato`. Se la riparazione tocca test della base, prima della chiusura parte
+il revisore. Poi la coda.
 
 ### Guardiano (`guardiano.sh`)
 Se nessuna esecuzione della catena è attiva: la prima issue `in-corso` senza novità da più di

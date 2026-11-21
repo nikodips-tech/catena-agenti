@@ -2,8 +2,9 @@
 # Chiusura (niente Claude): apre la pull request dal ramo dell'issue alla base, con l'App
 # (APP_TOKEN), così la CI parte da sola; se la PR c'è già, un commit vuoto dell'App la fa
 # ripartire. Etichette: il tipo (task/hotfix) e, quando la catena può unire da sola,
-# `unione-automatica`. Non si unisce da sola: un hotfix (l'unione in master è del proprietario)
-# e una revisione con riserve.
+# `unione-automatica`: ogni task, anche con le riserve del revisore (che restano scritte nel
+# corpo della PR e nel commento). Non si unisce da sola solo un hotfix: l'unione in master
+# è del proprietario.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 etichette=$(pf_issue_etichette "$ISSUE"); tipo=$(tipo_issue "$etichette")
@@ -14,9 +15,9 @@ approvata=$(conta_commenti "$ISSUE" "$T_REV_OK"); riserve=$(conta_commenti "$ISS
 revisione="nessuna (corsia diretta: garantisce la CI)"
 [ "$riserve" -eq 0 ] || revisione="con riserve"
 [ "$approvata" -eq 0 ] || revisione="approvata"
+con_riserve=no; [ "$revisione" != "con riserve" ] || con_riserve=si
 unione_automatica=si
 [ "$tipo" = task ] || unione_automatica=no
-[ "$riserve" -eq 0 ] || [ "$approvata" -gt 0 ] || unione_automatica=no
 
 pr=$(pf_pr_aperta "$ramo" "$base" | jq -r '.numero // empty')
 if [ -z "$pr" ]; then
@@ -24,6 +25,7 @@ if [ -z "$pr" ]; then
   sotto=$(pf_sottoissue "$ISSUE" | jq -r '.[] | "- #\(.numero) \(.titolo)"')
   { printf '%s\n\nCorsia: %s\nRevisione: %s\n' "$(riferimento_issue "$ISSUE" "$base")" "$corsia" "$revisione"
     [ -z "$sotto" ] || printf '\nSotto-task:\n\n%s\n' "$sotto"
+    if [ "$con_riserve" = si ]; then printf '\nRiserve del revisore:\n\n%s\n' "$(commento_con_titolo "$ISSUE" "$T_REV_RISERVE" | tronca 4000)"; fi
     printf '\nAperta dalla catena di agenti.\n'; } > "$TMP_BASE/corpo.md"
   pr=$(pf_pr_apri "$ramo" "$base" "$titolo" "$TMP_BASE/corpo.md")
 else
@@ -39,9 +41,8 @@ if [ "$unione_automatica" = si ]; then pf_pr_etichetta_aggiungi "$pr" "$E_UNIONE
 
 testo="$T_PR_PRONTA"$'\n\n'"#$pr verso \`$base\`. "
 case "$tipo-$unione_automatica" in
-  task-si) testo+="A controlli verdi si unisce da sola." ;;
+  task-si) if [ "$con_riserve" = si ]; then testo+="A controlli verdi si unisce da sola, con le riserve del revisore: guardale prima del passaggio in master."; else testo+="A controlli verdi si unisce da sola."; fi ;;
   hotfix-*) testo+="È un hotfix: l'unione in \`$base\` la fai tu, dopo i controlli." ;;
-  *) testo+="La revisione non ha approvato: unirla o chiuderla spetta a te." ;;
+  *) testo+="Non si unisce da sola: l'unione spetta a te." ;;
 esac
 pf_commenta_testo "$ISSUE" "$testo"
-if [ "$unione_automatica" = no ] && [ "$tipo" = task ]; then pf_etichetta_aggiungi "$ISSUE" "$E_DOMANDA"; fi

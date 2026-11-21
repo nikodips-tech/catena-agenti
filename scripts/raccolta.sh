@@ -13,6 +13,7 @@ mkdir -p "$ESITO_DIR" "$LOG_DIR"
 : > "$ESITO_DIR/avvisi.md"
 uscita=$(cat "$ESITO_DIR/claude-exit" 2> /dev/null || echo "?")
 [ -f esito.json ] && mv esito.json "$ESITO_DIR/esito.json"
+[ -f note-developer.md ] && mv note-developer.md "$ESITO_DIR/note.md"
 
 avviso_file() { # <titolo> <elenco>
   [ -n "$2" ] || return 0
@@ -47,21 +48,17 @@ case "$ruolo" in
   developer)
     e2e=$(grep -P "$RE_E2E" "$ESITO_DIR/file.txt" || true)
     if [ -n "$e2e" ]; then mapfile -t f <<< "$e2e"; ripristina "${f[@]}"; avviso_file "Test e2e toccati e ripristinati" "$e2e"; fi
-    # I test che esistono già nella base non si cancellano, e si modificano solo quelli in
-    # test-modificabili.txt (li autorizza il team leader, contesto.sh): gli altri si rimettono
-    # com'erano e i controlli diranno la verità. I test aggiunti sul ramo sono del developer
-    modificabili="$CONTESTO/test-modificabili.txt"; [ -f "$modificabili" ] || : > "$modificabili"
+    # I test della base si possono modificare e cancellare (il revisore li giudica). Si
+    # ripristinano solo quelli che il revisore ha bloccato (test-bloccati.txt, contesto.sh)
+    bloccati="$CONTESTO/test-bloccati.txt"; [ -f "$bloccati" ] || : > "$bloccati"
     toccati=""
-    while IFS=$'\t' read -r st f; do
-      grep -qP -- "$RE_TEST" <<< "$f" || continue
-      git cat-file -e "origin/$BASE:$f" 2> /dev/null || continue
-      [ "$st" = M ] && grep -qxF -- "$f" "$modificabili" && continue
-      toccati+="$f"$'\n'
-    done < <(grep -vE '^A' "$ESITO_DIR/stato-file.txt" || true)
+    while IFS= read -r f; do
+      [ -n "$f" ] && grep -qxF -- "$f" "$bloccati" && toccati+="$f"$'\n'
+    done < "$ESITO_DIR/file.txt"
     toccati=${toccati%$'\n'}
     if [ -n "$toccati" ]; then
       mapfile -t f <<< "$toccati"; ripristina "${f[@]}"
-      avviso_file "Test già presenti in $BASE modificati senza permesso e ripristinati" "$toccati"
+      avviso_file "Test bloccati dal revisore toccati e ripristinati" "$toccati"
     fi
     # Per esito-developer.sh: se i controlli falliscono, l'escalation parte subito
     printf '%s' "$toccati" > "$ESITO_DIR/test-ripristinati.txt"
@@ -78,7 +75,7 @@ case "$ruolo" in
       stato ok
     else
       stato fallito
-      { [ -z "$toccati" ] || printf 'Avevi modificato senza permesso test che esistono già nella base (%s): sono stati ripristinati.\n\n' "$(paste -sd, - <<< "$toccati")"
+      { [ -z "$toccati" ] || printf 'Avevi toccato test bloccati dal revisore (%s): sono stati ripristinati.\n\n' "$(paste -sd, - <<< "$toccati")"
         tail -c 4000 "$LOG_DIR/controlli.log"; } > "$ESITO_DIR/messaggio.md"
       riga=$(grep -m1 -E ': FALLITO' "$LOG_DIR/controlli.log" || tail -n 1 "$LOG_DIR/controlli.log")
       echo "controlli falliti: $riga" > "$ESITO_DIR/motivo.txt"

@@ -4,7 +4,7 @@
 
 | Chi | Deve poter | Non deve poter |
 |---|---|---|
-| **Claude** (job agente) | leggere il checkout, scrivere file nel checkout, eseguire `controlli.sh`; il developer anche `rimuovi.sh` (cancella file normali del repo, mai protetti, e2e o test della base) | leggere issue, usare git/gh/rete, vedere token o segreti |
+| **Claude** (job agente) | leggere il checkout, scrivere file nel checkout, eseguire `controlli.sh`; il developer anche `rimuovi.sh` (cancella file normali del repo, mai protetti o e2e) | leggere issue, usare git/gh/rete, vedere token o segreti |
 | **Script di esito** | leggere e scrivere issue, etichette, commenti; push sui rami `issue-*`; avviare il passo dopo | push su `develop`/`master`; unire PR |
 | **Identità "App"** | aprire PR, push che fanno partire la CI, unire PR in `develop` | leggere o scrivere issue (non serve e così non lo fa nessuno per sbaglio) |
 | **Proprietario** | mettere `auto`, rispondere alle domande, unire in `master`, cambiare `.github/`, `CLAUDE.md`, `.claude/` | — |
@@ -96,7 +96,7 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | Commit assente dalla release | titolo squash senza `feat:`/`fix:` | prefisso da `titolo_squash` |
 | "Il developer non ha prodotto un risultato" | `bash -e` chiudeva il passo prima dello stato | controlli dentro `if …; then` |
 | Tre fallimenti su `format:check` | file scritti dall'agente non formattati | formattazione di tutto il ramo prima dei controlli |
-| "ha toccato file di test" | file di prova del developer | test del ramo suoi, test della base ripristinati salvo quelli in `test_modificabili` |
+| "ha toccato file di test" | il developer cambiava test della base | liberi, con note e giudizio del revisore; ripristinati solo quelli che il revisore ha bloccato (`test_bloccati`) |
 | Molti token del developer | output completo dei controlli | riassunto corto, log su file |
 | In coda per minuti senza job | rallentamento di GitHub | il guardiano riparte; le annullate non scrivono |
 | Passo in errore su `--remove-label` | etichetta cancellata | `pf_etichetta_togli` ignora l'assenza, il preflight le crea |

@@ -38,7 +38,7 @@ E_IN_CORSO=in-corso; E_DOMANDA=domanda; E_BLOCCATO=bloccato; E_UNIONE=unione-aut
 E_IN_DEVELOP=in-develop
 
 # Tetti
-MAX_TENTATIVI=3        # tentativi del developer per sottotask
+MAX_TENTATIVI=2        # tentativi del developer per sottotask
 MAX_GIRI_REVISIONE=2   # giri di revisione prima delle riserve
 MAX_ESCALATION=1       # escalation al team leader per sottotask
 MAX_RIPARAZIONI=1      # riparazioni dopo una CI rossa
@@ -147,26 +147,26 @@ corsia_di() { if grep -qiE '^Corsia:[[:space:]]*diretta' <<< "$1"; then echo dir
 # senza_test <corpo sottotask>: vero se il corpo ha la riga "Test: no"
 senza_test() { tr -d '\r' <<< "$1" | grep -qx 'Test: no'; }
 
-# test_modificabili <testo>: i test della base che il team leader permette di modificare (la
-# riga "Test modificabili: a, b" del sotto-task o della specifica), uno per riga
-test_modificabili() {
-  tr -d '\r' <<< "$1" | sed -n 's/^Test modificabili:[[:space:]]*//p' | tr ',' '\n' \
+# test_bloccati <testo>: i test della base che il revisore ha fatto ripristinare e che il
+# developer non può toccare (la riga "Test bloccati: a, b" del sotto-task), uno per riga
+test_bloccati() {
+  tr -d '\r' <<< "$1" | sed -n 's/^Test bloccati:[[:space:]]*//p' | tr ',' '\n' \
     | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//' | grep -v '^$' || true
 }
 
 # righe_sottotask <file esito> <elemento jq>: le righe di servizio in fondo al corpo di un
 # sotto-task. `== false` e non `// true`: per jq `false // true` vale true
 righe_sottotask() {
-  local tm
+  local tb
   [ "$(jq -r "$2.test == false" "$1")" != true ] || printf '\nTest: no\n'
-  tm=$(jq -r "($2.test_modificabili // []) | join(\", \")" "$1")
-  [ -z "$tm" ] || printf '\nTest modificabili: %s\n' "$tm"
+  tb=$(jq -r "($2.test_bloccati // []) | join(\", \")" "$1")
+  [ -z "$tb" ] || printf '\nTest bloccati: %s\n' "$tb"
 }
 
 # Validazione jq di un elenco di sotto-task (team leader e revisore)
 SOTTOTASK_VALIDI='all(.[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string"
   and ((.test // true) | type) == "boolean"
-  and ((.test_modificabili // []) | type) == "array" and all((.test_modificabili // [])[]; type == "string" and length > 0))'
+  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0))'
 
 # ---------------------------------------------------------------- git
 git_identita() {
@@ -220,19 +220,28 @@ ripristina_protetti() {
   done
 }
 
-# file_vietati <base> <file dei test modificabili>: nella patch nell'indice (rispetto a HEAD)
-# i file protetti o e2e toccati, e i test della base cancellati o modificati senza permesso.
-# Uno per riga; vuoto se la patch è pulita
+# file_vietati <base> <file dei test bloccati>: nella patch nell'indice (rispetto a HEAD)
+# i file protetti o e2e toccati, e i test bloccati dal revisore toccati (qualsiasi stato).
+# I test della base non bloccati sono ammessi. Uno per riga; vuoto se la patch è pulita
 file_vietati() {
   cd "$REPO_DIR" || return 1
   local st f
   git diff --cached --name-status --no-renames HEAD | while IFS=$'\t' read -r st f; do
     if grep -qP -- "$RE_PROTETTI|$RE_E2E" <<< "$f"; then echo "$f"; continue; fi
+    if [ -s "$2" ] && grep -qxF -- "$f" "$2"; then echo "$f"; fi
+  done
+}
+
+# test_base_toccati <base> <rif>: i test che esistono in origin/<base> e che l'indice ha
+# modificato o cancellato rispetto a <rif>. Righe "M<TAB>file" o "D<TAB>file"
+test_base_toccati() {
+  cd "$REPO_DIR" || return 1
+  local st f
+  git diff --cached --name-status --no-renames "$2" | while IFS=$'\t' read -r st f; do
+    [ "$st" = M ] || [ "$st" = D ] || continue
     grep -qP -- "$RE_TEST" <<< "$f" || continue
     git cat-file -e "origin/$1:$f" 2> /dev/null || continue
-    [ "$st" = M ] && grep -qxF -- "$f" "$2" && continue
-    [ "$st" = A ] && continue
-    echo "$f"
+    printf '%s\t%s\n' "$st" "$f"
   done
 }
 

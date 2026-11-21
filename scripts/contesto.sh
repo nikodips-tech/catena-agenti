@@ -46,7 +46,7 @@ case "$ruolo" in
     pf_issue_commenti "$ISSUE" | jq -r --arg o "$PROPRIETARIO" '[.[] | select(.autore == $o) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/risposte.md"
     descrivi risposte.md "i commenti del proprietario sull'issue, cioè le risposte alle tue domande (vuoto se nessuno)"
     if [ -n "${SOTTOTASK:-}" ]; then
-      # Escalation: il sotto-task è fallito tre volte
+      # Escalation: il sotto-task è fallito o ha toccato test bloccati
       specifica; sottotask_md
       nota_md errore.log "le ultime righe dell'errore dell'ultimo tentativo del developer"
       git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
@@ -54,11 +54,11 @@ case "$ruolo" in
         git diff "origin/$BASE...origin/$RAMO" | limita 150000 > "$CONTESTO/lavoro.diff"
         descrivi lavoro.diff "tutto il lavoro sul ramo $RAMO rispetto a $BASE, compresi i test del sotto-task e i tentativi del developer (commit wip:)"
       fi
-      { echo "Il sotto-task #$SOTTOTASK è fallito. Sei chiamato in escalation: decidi se il test è sbagliato,"
-        echo "se il sotto-task va riformulato in pezzi più piccoli o se serve davvero una persona (docs/specifica.md, Escalation)."
-        echo "Se l'errore dice che sono stati ripristinati test della base, l'escalation è arrivata subito: il developer"
-        echo "li ha modificati senza permesso. Se il sotto-task richiede davvero di cambiarli, riformula indicandoli in"
-        echo "test_modificabili; se non serve, riformula spiegando nella descrizione che vanno lasciati com'erano."
+      { echo "Il sotto-task #$SOTTOTASK è fallito $MAX_TENTATIVI volte, oppure subito perché il developer ha toccato test"
+        echo "bloccati dal revisore. Sei chiamato in escalation: decidi se il test è sbagliato, se il sotto-task va"
+        echo "riformulato in pezzi più piccoli o se serve davvero una persona (docs/specifica.md, Escalation)."
+        echo "Se l'errore dice che sono stati ripristinati test bloccati, decidi se tenerli bloccati (mettili in"
+        echo "test_bloccati dei sotto-task nuovi) o sbloccarli (omettili e spiega nella descrizione come vanno cambiati)."
       } > "$CONTESTO/escalation.md"
       descrivi escalation.md "perché sei stato chiamato"
     fi ;;
@@ -72,17 +72,10 @@ case "$ruolo" in
     else
       sottotask_md
     fi
-    # I test già presenti nella base non si toccano: l'elenco di quelli che il ramo ha aggiunto
-    git diff --diff-filter=A --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-del-ramo.txt" || true
-    descrivi test-del-ramo.txt "i file di test aggiunti su questo ramo dai sotto-task precedenti (puoi modificarli)"
-    # I test della base modificabili: quelli che il team leader autorizza nel sotto-task (in
-    # corsia diretta e nelle riparazioni, nella specifica) e quelli già modificati sul ramo,
-    # che la raccolta di un passo precedente ha lasciato passare. raccolta.sh legge questo file
-    if [ "$SOTTOTASK" = "$ISSUE" ]; then autorizzati=$(cat "$CONTESTO/specifica.md"); else autorizzati=$(cat "$CONTESTO/sottotask.md"); fi
-    { test_modificabili "$autorizzati"
-      git diff --diff-filter=M --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" || true
-    } | sort -u > "$CONTESTO/test-modificabili.txt"
-    descrivi test-modificabili.txt "i test che esistono già in $BASE e che puoi modificare (non cancellare); tutti gli altri test di $BASE non si toccano"
+    # I test della base che il revisore ha fatto ripristinare: li legge anche raccolta.sh.
+    # In corsia diretta e nelle riparazioni il sotto-task è l'issue: nessun test bloccato
+    if [ "$SOTTOTASK" = "$ISSUE" ]; then : > "$CONTESTO/test-bloccati.txt"; else test_bloccati "$(cat "$CONTESTO/sottotask.md")" | sort -u > "$CONTESTO/test-bloccati.txt"; fi
+    descrivi test-bloccati.txt "i test della base che il revisore ha fatto ripristinare: non toccarli, fai passare il codice (vuoto se nessuno)"
     nota_md errore.txt "le ultime righe dell'errore del tentativo precedente, o i controlli falliti della CI da riparare"
     wip=$(git log --format=%s "origin/$BASE..HEAD" 2> /dev/null | grep -E "^wip: #$SOTTOTASK " | sed -n 1p || true)
     if [ -n "$wip" ]; then
@@ -93,8 +86,17 @@ case "$ruolo" in
     specifica; differenze
     git diff --diff-filter=A --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-developer.txt" || true
     descrivi test-developer.txt "i file di test aggiunti sul ramo dal developer (vuoto se nessuno)"
-    git diff --diff-filter=M --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_TEST" | sort -u > "$CONTESTO/test-modificati.txt" || true
-    descrivi test-modificati.txt "i test che esistono già in $BASE e che il developer ha modificato con il permesso del team leader (vuoto se nessuno): controlla che non siano stati indeboliti"
+    # Test della base modificati (M) o cancellati (D) sul ramo
+    git diff --name-status --no-renames --diff-filter=MD "origin/$BASE...HEAD" | while IFS=$'\t' read -r st f; do
+      if grep -qP -- "$RE_TEST" <<< "$f"; then printf '%s\t%s\n' "$st" "$f"; fi
+    done > "$CONTESTO/test-base-toccati.txt"
+    descrivi test-base-toccati.txt "i test della base modificati (M) o cancellati (D) dal developer (vuoto se nessuno): giudica se il cambiamento è giustificato"
+    # Le note stanno nel corpo dei commit del developer (esito-developer.sh)
+    for c in $(git log --reverse --format=%H "origin/$BASE..HEAD"); do
+      corpo=$(git show -s --format=%b "$c")
+      if [ -n "$corpo" ]; then printf '%s\n%s\n\n' "$(git show -s --format=%s "$c")" "$corpo"; fi
+    done > "$CONTESTO/note-developer.md"
+    descrivi note-developer.md "le note del developer sui sotto-task: perché ha toccato test della base o fatto scelte particolari (vuoto se nessuna)"
     pf_issue_commenti "$ISSUE" | jq -r '[.[] | select(.corpo | startswith("## Revisione")) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/revisioni-precedenti.md"
     descrivi revisioni-precedenti.md "le tue revisioni precedenti su questa issue (vuoto al primo giro): non ripetere richieste già fatte" ;;
   editor)
