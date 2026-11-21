@@ -78,17 +78,25 @@ fi
 git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
 pref=$(prefisso_di "$tipo")
 
+prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
+
 if [ "$(corsia_di "$specifica")" = diretta ]; then
-  # Corsia diretta: il developer lavora sull'issue stessa, poi la chiusura
-  if commit_sul_ramo "$ramo" "$pref: #$ISSUE" "$base"; then
-    pf_passo_avvia chiusura "$ISSUE"
-  else
+  # Corsia diretta: il developer lavora sull'issue stessa
+  if ! commit_sul_ramo "$ramo" "$pref: #$ISSUE" "$base"; then
     pf_passo_avvia developer "$ISSUE" "$ISSUE" 1
+    exit 0
   fi
-  exit 0
+  # Lavoro finito: di norma la chiusura. Si prosegue come nella corsia completa se ci sono
+  # sotto-task aperti (revisore), o se il ramo tocca test della base e nessuno l'ha rivisto
+  tocca_test=$(git diff --name-status --no-renames --diff-filter=MD "origin/$base...origin/$ramo" | while IFS=$'\t' read -r st f; do
+    if grep -qP -- "$RE_TEST" <<< "$f"; then echo "$f"; fi
+  done)
+  if [ -z "$prima" ] && { [ -z "$tocca_test" ] || [ "$(conta_commenti "$ISSUE" "$T_REV_OK" "$T_REV_RISERVE")" -gt 0 ]; }; then
+    pf_passo_avvia chiusura "$ISSUE"
+    exit 0
+  fi
 fi
 
-prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ -n "$prima" ]; then
   pf_passo_avvia developer "$ISSUE" "$prima" 1
 elif pf_ramo_esiste "$ramo"; then

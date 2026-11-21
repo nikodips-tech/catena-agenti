@@ -2,8 +2,8 @@
 # Esito del team leader (token in scrittura, niente Claude). Due casi:
 # - specifica (SOTTOTASK vuoto): pubblica "## Specifica" con la corsia; corsia diretta → developer
 #   sull'issue; corsia completa → crea le sub-issue e avvia la prima; domanda → `domanda`.
-# - escalation (SOTTOTASK pieno): il sotto-task è fallito tre volte, o una sola se ha toccato
-#   test della base senza permesso; il team leader decide
+# - escalation (SOTTOTASK pieno): il sotto-task è fallito MAX_TENTATIVI volte, o subito se ha
+#   toccato test bloccati dal revisore; il team leader decide
 #   riformula | bloccato (docs/specifica.md, Escalation).
 # Un esito.json mancante o non valido si ritenta una volta, poi `bloccato`.
 set -euo pipefail
@@ -54,7 +54,6 @@ if [ -z "${SOTTOTASK:-}" ]; then
     and (((.domanda // "") != "") or
          ((.specifica | type) == "string" and (.specifica | length) > 0
           and ((.corsia // "completa") | IN("diretta", "completa"))
-          and ((.test_modificabili // []) | type) == "array" and all((.test_modificabili // [])[]; type == "string" and length > 0)
           and ((.corsia // "completa") == "diretta" or ((.sottotask | type) == "array" and (.sottotask | length) > 0 and (.sottotask | '"$SOTTOTASK_VALIDI"')))))' \
     || non_valido "formato non previsto: servono domanda, oppure specifica, corsia e sottotask"
 
@@ -66,9 +65,7 @@ if [ -z "${SOTTOTASK:-}" ]; then
   fi
 
   corsia=$(jq -r '.corsia // "completa"' "$f")
-  # In corsia diretta i test della base modificabili stanno nella specifica (non c'è sotto-task)
-  tm=""; [ "$corsia" != diretta ] || tm=$(jq -r '(.test_modificabili // []) | join(", ")' "$f")
-  { echo "$T_SPECIFICA"; echo; echo "Corsia: $corsia"; [ -z "$tm" ] || echo "Test modificabili: $tm"; echo; jq -r '.specifica' "$f"; echo; echo "_${cons}_"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
+  { echo "$T_SPECIFICA"; echo; echo "Corsia: $corsia"; echo; jq -r '.specifica' "$f"; echo; echo "_${cons}_"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
 
   if [ "$corsia" = diretta ]; then
     pf_commenta_testo "$ISSUE" "Corsia diretta: parte il developer, codice e test insieme, poi la pull request."
@@ -114,7 +111,7 @@ crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$
 # In corsia diretta la riformulazione porta nella corsia completa: lo dice una nuova specifica
 specifica=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA")
 if [ "$(corsia_di "$specifica")" = diretta ]; then
-  { echo "$T_SPECIFICA"; echo; echo "Corsia: completa"; echo; sed -E '1,/^Corsia:/d; /^Test modificabili:/d' <<< "$specifica"; } | pf_issue_commenta "$ISSUE" -
+  { echo "$T_SPECIFICA"; echo; echo "Corsia: completa"; echo; sed -E '1,/^Corsia:/d' <<<"$specifica"; } | pf_issue_commenta "$ISSUE" -
 fi
 pf_commenta_testo "$ISSUE" "Escalation sul sotto-task #$SOTTOTASK: riformulato. Riparte dal sotto-task #$prima."
 pf_passo_avvia developer "$ISSUE" "$prima" 1

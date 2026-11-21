@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Esito del developer (token in scrittura, niente Claude).
 # - Controlli verdi: un solo commit "feat: #<n>" (o "fix:" per gli hotfix) che assorbe i
-#   tentativi precedenti (wip:), push, sotto-task chiuso, passo dopo (prossimo sotto-task,
-#   revisione, oppure chiusura in corsia diretta e nelle riparazioni).
+#   tentativi precedenti (wip:), con nel corpo le note del developer e i test della base
+#   toccati; push, sotto-task chiuso, passo dopo (prossimo sotto-task, revisione, oppure
+#   chiusura in corsia diretta e nelle riparazioni, a meno che abbia toccato test della base:
+#   allora la revisione).
 # - Controlli rossi: il lavoro parziale resta sul ramo come "wip: #<n> tentativo k", così il
-#   tentativo dopo corregge invece di rifare. Al terzo fallimento escalation al team leader
-#   (una volta), poi `bloccato`. Subito, se la raccolta ha ripristinato test della base.
+#   tentativo dopo corregge invece di rifare. Al fallimento di MAX_TENTATIVI escalation al
+#   team leader (una volta), poi `bloccato`. Subito, se la raccolta ha ripristinato test
+#   bloccati dal revisore.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 stato=$(cat "$ESITO_DIR/stato" 2> /dev/null || echo mancante)
@@ -27,20 +30,26 @@ bloccato() {
 ramo_checkout "$ramo" "$base"
 git_identita
 # La raccolta gira nel job di Claude e legge file che Claude può scrivere: qui, con il
-# token, i test della base modificabili si ricalcolano dall'issue e la patch si controlla
-if [ "$diretto" = 1 ]; then autorizzati=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA"); else autorizzati=$(pf_issue_corpo "$SOTTOTASK"); fi
-{ test_modificabili "$autorizzati"
-  git diff --diff-filter=M --name-only --no-renames "origin/$base...HEAD" | grep -P "$RE_TEST" || true
-} | sort -u > "$TMP_BASE/permessi.txt"
+# token, i test bloccati si ricalcolano dall'issue e la patch si controlla
+if [ "$diretto" = 1 ]; then : > "$TMP_BASE/bloccati.txt"; else test_bloccati "$(pf_issue_corpo "$SOTTOTASK")" | sort -u > "$TMP_BASE/bloccati.txt"; fi
 if [ -s "$ESITO_DIR/patch.diff" ]; then git apply --index "$ESITO_DIR/patch.diff"; fi
-vietati=$(file_vietati "$base" "$TMP_BASE/permessi.txt")
+vietati=$(file_vietati "$base" "$TMP_BASE/bloccati.txt")
 if [ -n "$vietati" ]; then
   git reset -q --hard
-  bloccato "patch scartata: tocca file che la raccolta avrebbe dovuto rimettere com'erano (file protetti, e2e o test della base senza permesso). Va guardato il job agente:"$'\n\n```\n'"$vietati"$'\n```'
+  bloccato "patch scartata: tocca file che la raccolta avrebbe dovuto rimettere com'erano (file protetti, e2e o test bloccati dal revisore). Va guardato il job agente:"$'\n\n```\n'"$vietati"$'\n```'
 fi
 
+# Test della base toccati e note del developer: vanno nei commenti e nel commit, il revisore li legge
+note=""; [ ! -f "$ESITO_DIR/note.md" ] || note=$(tronca 3000 < "$ESITO_DIR/note.md")
+calcola_extra() {
+  toccati_base=$(test_base_toccati "$base" HEAD); extra=""
+  [ -z "$toccati_base" ] || extra+=$'Test della base modificati (M) o cancellati (D):\n```\n'"$(tr '\t' ' ' <<< "$toccati_base")"$'\n```\n'
+  [ -z "$note" ] || extra+=$'\nNote del developer:\n'"$note"$'\n'
+}
+calcola_extra
+
 if [ "$stato" != ok ]; then
-  { printf 'Tentativo %s di %s fallito: %s (%s)\n' "$TENTATIVO" "$MAX_TENTATIVI" "$motivo" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$SOTTOTASK" -
+  { printf 'Tentativo %s di %s fallito: %s (%s)\n' "$TENTATIVO" "$MAX_TENTATIVI" "$motivo" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } | pf_issue_commenta "$SOTTOTASK" -
   # Il lavoro parziale resta sul ramo: il tentativo dopo lo corregge
   if [ -s "$ESITO_DIR/patch.diff" ]; then
     git commit -q -m "wip: #$SOTTOTASK tentativo $TENTATIVO"
@@ -48,13 +57,13 @@ if [ "$stato" != ok ]; then
   fi
   printf '%s' "$messaggio" > "$TMP_BASE/nota.txt"
   # Rosso con test della base ripristinati: il tentativo dopo rifarebbe la stessa modifica,
-  # quindi si salta subito al team leader, che può autorizzarla (test_modificabili)
+  # quindi si salta subito al team leader, che decide se tenerli bloccati o sbloccarli
   ripristinati=$(paste -sd, "$ESITO_DIR/test-ripristinati.txt" 2> /dev/null || true)
   if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ] && [ -z "$ripristinati" ]; then
     pf_passo_avvia developer "$ISSUE" "$SOTTOTASK" "$((TENTATIVO + 1))" "$TMP_BASE/nota.txt"
     exit 0
   fi
-  if [ -n "$ripristinati" ]; then perche="ha modificato test della base senza permesso ($ripristinati)"; else perche="è fallito $MAX_TENTATIVI volte"; fi
+  if [ -n "$ripristinati" ]; then perche="ha toccato test bloccati dal revisore ($ripristinati)"; else perche="è fallito $MAX_TENTATIVI volte"; fi
   # Riparazione di una CI rossa: niente escalation (riformulare a PR aperta riscriverebbe il
   # ramo), una sola riparazione e poi `bloccato` (docs/specifica.md, Scala di escalation)
   if [ "$diretto" = 1 ] && [ "$(conta_commenti "$ISSUE" "$T_RIPARAZIONE")" -gt 0 ]; then
@@ -68,21 +77,30 @@ if [ "$stato" != ok ]; then
   bloccato "$perche anche dopo l'escalation. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
 fi
 
-# Verde: un solo commit che assorbe i tentativi precedenti
+# Verde: un solo commit che assorbe i tentativi precedenti. Il corpo porta note e test della
+# base toccati: il revisore li ritrova nel log
 primo_wip=$(git log --reverse --format='%H %s' "origin/$base..HEAD" | grep -E " wip: #$SOTTOTASK " | sed -n 1p | cut -d' ' -f1 || true)
 forza=()
 if [ -n "$primo_wip" ]; then git reset -q --soft "$primo_wip^"; forza=(--force); fi
-git commit -q --allow-empty -m "$pref: #$SOTTOTASK"
+# Dopo l'assorbimento i test toccati si contano da prima dei wip: anche quelli dei tentativi falliti
+[ -z "$primo_wip" ] || calcola_extra
+{ echo "$pref: #$SOTTOTASK"
+  if [ -n "$toccati_base" ]; then printf '\nTest della base modificati (M) o cancellati (D):\n%s\n' "$(tr '\t' ' ' <<< "$toccati_base")"; fi
+  if [ -n "$note" ]; then printf '\nNote del developer:\n%s\n' "$note"; fi
+} > "$TMP_BASE/commit.txt"
+git commit -q --allow-empty -F "$TMP_BASE/commit.txt"
 pf_push "${forza[@]}" "$ramo"
 
 if [ "$diretto" = 1 ]; then
-  { printf 'Developer: fatto in %s tentativo/i (%s). Parte la chiusura.\n' "$TENTATIVO" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
-  pf_passo_avvia chiusura "$ISSUE"
+  { printf 'Developer: fatto in %s tentativo/i (%s). ' "$TENTATIVO" "$cons"
+    if [ -n "$toccati_base" ]; then echo "Ha toccato test della base: parte la revisione."; else echo "Parte la chiusura."; fi
+    [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } | pf_issue_commenta "$ISSUE" -
+  if [ -n "$toccati_base" ]; then pf_passo_avvia revisore "$ISSUE"; else pf_passo_avvia chiusura "$ISSUE"; fi
   exit 0
 fi
 
 pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
-{ printf 'Fatto sul ramo `%s` in %s tentativo/i (%s).\n' "$ramo" "$TENTATIVO" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } > "$TMP_BASE/chiusura.md"
+{ printf 'Fatto sul ramo `%s` in %s tentativo/i (%s).\n' "$ramo" "$TENTATIVO" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } > "$TMP_BASE/chiusura.md"
 pf_issue_chiudi "$SOTTOTASK" "$(cat "$TMP_BASE/chiusura.md")"
 
 prossimo=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)

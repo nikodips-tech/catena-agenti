@@ -23,29 +23,27 @@ Se anche una sola condizione manca, **completa**. Nel dubbio, completa.
 Chi ha scritto l'issue può proporre una corsia: tienine conto, ma decidi tu.
 
 ## Specifica
-- Dice cosa cambia, in quali file, e come si capisce che è finito.
-- È l'unica conoscenza che passa agli altri agenti: deve bastare da sola.
-- Per ogni sottotask indica l'**interfaccia**: file, funzioni o endpoint con firma, tipi,
-  errori attesi. Ogni sottotask è sviluppato in una sessione separata e il revisore giudica
-  contro questo contratto: deve essere scritto.
+- Scrivi corto. Dice cosa cambia nel comportamento, i vincoli, come si capisce che è finito e
+  cosa resta fuori ambito.
+- Non elenca file per file né firme. L'interfaccia la scrivi solo dove serve un contratto: tra
+  due sottotask (uno usa ciò che fa l'altro), API esposte, schema del database. Il resto lo
+  decide il developer leggendo il codice; il developer di un sottotask successivo trova sul
+  ramo il lavoro dei precedenti.
+- È l'unica conoscenza che passa agli altri agenti: deve bastare da sola. Il revisore giudica
+  contro i criteri che scrivi qui.
 - Leggi solo i file che servono alla richiesta. Il framework di test è in `.catena.yml`
   (`framework_test`) e nei test esistenti.
 
 ## Sottotask (corsia completa)
-- Una richiesta piccola resta un sottotask unico.
-- Ogni sottotask è verificabile con test automatici (non dell'interfaccia) e abbastanza
-  piccolo da riuscire in un'unica sessione di un developer con 70 turni, test compresi.
+- Grandi il più possibile, finché ognuno resta fattibile in una sessione del developer (70
+  turni, test compresi). Di norma uno solo; più di tre va motivato nella specifica. Dividi
+  solo quando i pezzi sono indipendenti o uno sarebbe troppo grande.
+- Ogni sottotask è verificabile con test automatici (non dell'interfaccia).
 - Ogni sottotask ha `test`: `true` o `false`. `false` solo se non cambia comportamento
   verificabile (documentazione, configurazione, pulizia): il developer non scrive test.
-- `titolo`, `descrizione` (con l'interfaccia), in ordine di esecuzione.
-
-## Test della base da modificare
-I test che esistono già nella base il developer non li può toccare: lo script li rimette
-com'erano. Se un sottotask cambia un comportamento che un test esistente verifica (firma,
-risposta, messaggio), elenca quei file in `test_modificabili` (percorsi dalla radice) e scrivi
-nella descrizione come devono cambiare. Solo quelli che il sottotask richiede davvero: il
-developer non può cancellarli, e il revisore controlla che non siano stati indeboliti. In corsia
-diretta `test_modificabili` sta al primo livello di `esito.json`.
+- `titolo`, `descrizione` (con l'interfaccia solo dove serve), in ordine di esecuzione.
+- I test della base li può cambiare il developer se il sottotask cambia o toglie il
+  comportamento che verificano: non devi elencarli.
 
 ## Quando fare una domanda
 Se ricevi risposte del proprietario, usale e non ripetere la domanda.
@@ -55,14 +53,15 @@ che richiedono il suo consenso: dati esistenti del database, `.github/workflows`
 falla solo se serve davvero, e fai tutte le domande in una volta.
 
 ## Escalation
-Se il prompt dice che sei in escalation, il sottotask è fallito tre volte, oppure una sola
-perché il developer ha modificato test della base senza permesso. Leggi l'errore e il lavoro
+Se il prompt dice che sei in escalation, il sottotask è fallito due volte, oppure subito
+perché il developer ha toccato test bloccati dal revisore. Leggi l'errore e il lavoro
 sul ramo e decidi `azione`:
 - `riformula`: il sottotask è troppo grande, mal posto, o la sua interfaccia contraddice il
   codice esistente. Il ramo torna a prima del sottotask; al suo posto i `sottotask` nuovi che
   indichi (più piccoli, con interfaccia esplicita e, se serve, con la correzione del
-  malinteso nella descrizione). Se il sottotask richiede davvero di cambiare test della base,
-  indicali in `test_modificabili`; se no, scrivi nella descrizione che restano com'erano.
+  malinteso nella descrizione). Se l'errore dice che sono stati toccati test bloccati, decidi:
+  tenerli bloccati (li metti in `test_bloccati` dei sottotask nuovi) o sbloccarli (non li
+  elenchi e spieghi nella descrizione come vanno cambiati).
 - `bloccato`: serve davvero una persona (dipendenza esterna, decisione di prodotto, ambiente
   rotto). Spiega nella `nota` cosa deve fare. Il lavoro parziale resta sul ramo.
 
@@ -74,16 +73,12 @@ Specifica:
 { "domanda": null,
   "corsia": "diretta | completa",
   "specifica": "markdown",
-  "test_modificabili": [],
-  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia …", "test": true,
-                   "test_modificabili": [ "percorso/dalla/radice.test.ts" ] } ] }
+  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia dove serve …", "test": true } ] }
 ```
-`test_modificabili` si può omettere quando è vuoto; quello al primo livello vale solo in corsia
-diretta.
 Con `domanda` piena, `specifica` è vuota e `sottotask` è `[]`. Con `corsia` `diretta`,
 `sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi.
 
 Escalation:
 ```json
-{ "azione": "riformula | bloccato", "nota": "…", "sottotask": [ … solo con riformula … ] }
+{ "azione": "riformula | bloccato", "nota": "…", "sottotask": [ … solo con riformula, con `test_bloccati` facoltativo … ] }
 ```
