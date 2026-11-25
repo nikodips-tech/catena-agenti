@@ -20,7 +20,7 @@ jobs:
   in-develop:
     # Solo le PR unite davvero
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     permissions:
       contents: read

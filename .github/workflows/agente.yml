@@ -63,7 +63,7 @@ env:
 
 jobs:
   inizio:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     permissions:
       issues: write
@@ -76,7 +76,7 @@ jobs:
 
   agente:
     needs: inizio
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     # Il tetto di tempo del ruolo sta sul passo di Claude (sotto); il job ha 15 minuti in più
     # per dipendenze, raccolta e controlli, così la raccolta scrive sempre il suo esito
     timeout-minutes: ${{ fromJSON('{"team-leader":35,"developer":70,"revisore":40,"editor":30}')[inputs.ruolo] }}
@@ -164,7 +164,7 @@ jobs:
   esito:
     needs: agente
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 10
     permissions:
       contents: write

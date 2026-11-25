@@ -34,7 +34,7 @@ jobs:
   # Il token della App si prova qui, nell'environment `agenti`: se non si ottiene, il
   # preflight lo dice subito invece di scoprirlo alla chiusura
   app:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     environment: agenti
     outputs:
@@ -50,7 +50,7 @@ jobs:
 
   avvio:
     needs: app
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 10
     permissions:
       contents: read
