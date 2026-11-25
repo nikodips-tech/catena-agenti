@@ -11,6 +11,7 @@ workflow e un file di configurazione.
 | Decidere se passare dalle issue o fare la modifica direttamente | [docs/corsie.md](docs/corsie.md) |
 | Collegare un progetto | [prompt/README.md](prompt/README.md) (i prompt per Claude Code), [docs/configurazione.md](docs/configurazione.md), [docs/permessi.md](docs/permessi.md) |
 | La CI dei progetti | [docs/ci.md](docs/ci.md) |
+| Far girare i job su un runner proprio | [docs/runner.md](docs/runner.md) |
 | Release, tag e chiusura delle issue | [docs/rilascio.md](docs/rilascio.md) |
 | Portarla su un'altra piattaforma | [docs/portabilita.md](docs/portabilita.md) |
 | Farla girare in una sessione di Claude Code | [docs/locale.md](docs/locale.md) |
@@ -28,7 +29,7 @@ piattaforme/gitlab/     segnaposto
 .github/workflows/      workflow riutilizzabili (workflow_call), chiamati dai progetti
 modello-repo/           cosa va in ogni progetto: catena.yml, ci.yml, release, tag-master, in-develop, .catena.yml, CLAUDE.md, modelli di issue e PR,
                         product owner, skill /catena e agenti sottili per la sessione locale
-docs/                   specifica, corsie, flusso, permessi, configurazione, CI, portabilità, esempi
+docs/                   specifica, corsie, flusso, permessi, configurazione, CI, runner, portabilità, esempi
 prompt/                 i prompt per migrare o aggiornare un progetto con Claude Code
 ```
 
