@@ -29,6 +29,8 @@ runner. Devono essere **gli stessi della CI**.
 | `container_opzioni` | `-e TZ=Europe/Rome` | altre opzioni di `docker run` |
 | `installa` | `npm ci --no-audit --no-fund --silent` | dipendenze, prima di Claude |
 | `installato_se` | `node_modules` | percorso (dalla cartella) che, se esiste, evita di rifare `installa` |
+| `cache` | `.cache/npm .cache/cargo` | cartelle (dalla cartella, ignorate da git) da tenere in cache tra un giro e l'altro; vuoto = niente cache (`docs/ci.md`) |
+| `cache_chiave` | `package-lock.json Cargo.lock` | file (dalla cartella) il cui cambio rifà la cache |
 | `lint` | `npm run -s lint -- --quiet && npm run -s format:check` | solo errori |
 | `tipi` | `npm run -s typecheck` | vuoto se il progetto non ha tipi |
 | `test` | `npm test -s -- --reporter=dot` | reporter che mostra solo i fallimenti |

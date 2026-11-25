@@ -64,6 +64,11 @@ if [ ! -f "$CONFIG" ]; then
   problemi+=("Manca \`.catena.yml\` nella radice di \`$RAMO_SVILUPPO\` (docs/configurazione.md)")
 else
   [ -n "$(cfg lint)$(cfg tipi)$(cfg test)" ] || problemi+=("\`.catena.yml\` non configura nessun controllo (lint, tipi, test)")
+  # La cache sta nel checkout: se git non la ignora, la raccolta la committa
+  for p in $(cfg cache); do
+    git -C "$REPO_DIR" check-ignore -q "$(cfg cartella .)/$p/x" \
+      || problemi+=("La cartella di cache \`$p\` (chiave \`cache\`) non è in \`.gitignore\`")
+  done
 fi
 
 if [ "$PIATTAFORMA" = github ]; then

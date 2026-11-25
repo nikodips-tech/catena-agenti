@@ -113,6 +113,17 @@ jobs:
       - name: Credenziali via
         run: git -C "$REPO_DIR" config --unset-all http.https://github.com/.extraheader || true
 
+      # Cache delle dipendenze (chiave `cache`): solo lettura, il codice dell'agente non la scrive
+      - id: cache
+        if: inputs.ruolo == 'developer'
+        run: bash "$CATENA/scripts/ci/cache.sh"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.cache.outputs.chiave != ''
+        with:
+          path: ${{ steps.cache.outputs.percorsi }}
+          key: ${{ steps.cache.outputs.chiave }}
+          restore-keys: ${{ steps.cache.outputs.prefisso }}
+
       # Le dipendenze prima di Claude: così il loro output non entra nel suo contesto
       - name: Dipendenze
         if: inputs.ruolo == 'developer'
