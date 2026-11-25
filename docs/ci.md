@@ -27,6 +27,23 @@ se la PR cambia solo documentazione:
     if: github.event_name == 'workflow_dispatch' && inputs.e2e == 'si' && needs.ci.outputs.codice == 'si'
 ```
 
+## Cache delle dipendenze
+
+Facoltativa: con `cache` in `.catena.yml` i job `lint`, `tipi`, `test` e il developer
+ripristinano quelle cartelle prima di `installa`. La chiave è l'hash dei file di
+`cache_chiave`; se cambiano si riparte dalla cache più recente.
+
+- **Chi la scrive**: solo il job `test`, e solo fuori dalle pull request (push o avvio a mano
+  su `develop`), dove gira codice già rivisto. Le PR e il developer la leggono soltanto, così
+  né il codice di una PR né quello dell'agente possono avvelenarla. Per averla, il wrapper
+  del progetto aggiunge `push: branches: [develop]` agli eventi.
+- **Cosa metterci**: ciò che si scarica, che npm e cargo verificano con gli hash del
+  lockfile (es. `npm_config_cache` e `CARGO_HOME` puntati in `/lavoro/.cache/…` con
+  `container_opzioni: -e npm_config_cache=/lavoro/.cache/npm -e CARGO_HOME=/lavoro/.cache/cargo`),
+  ed eventualmente le compilazioni (`target`). **Non `node_modules`**: dopo un cambio del
+  lockfile tornerebbe quello vecchio e `installato_se` salterebbe `installa`.
+- Le cartelle vanno in `.gitignore` (il preflight lo controlla) e fuori dal lint.
+
 Controlli che un progetto ha e la CI condivisa no: si propongono nel resoconto della
 migrazione e si decide se generalizzarli (`prompt/regole-sessione.md`).
 

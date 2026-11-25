@@ -85,9 +85,28 @@ jobs:
         with:
           path: repo
           persist-credentials: false
+      # Cache delle dipendenze (chiave `cache`): nelle PR solo lettura; la salva il job test
+      # fuori dalle PR (push o avvio a mano su develop), dove gira codice già rivisto
+      - id: cache
+        if: env.CODICE == 'si'
+        run: bash "$CATENA/scripts/ci/cache.sh"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: ripristino
+        if: steps.cache.outputs.chiave != ''
+        with:
+          path: ${{ steps.cache.outputs.percorsi }}
+          key: ${{ steps.cache.outputs.chiave }}
+          restore-keys: ${{ steps.cache.outputs.prefisso }}
       - name: ${{ matrix.controllo }}
         if: env.CODICE == 'si'
         run: bash "$CATENA/scripts/ci/controllo.sh" "${{ matrix.controllo }}"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: >-
+          steps.cache.outputs.chiave != '' && matrix.controllo == 'test' &&
+          github.event_name != 'pull_request' && steps.ripristino.outputs.cache-hit != 'true'
+        with:
+          path: ${{ steps.cache.outputs.percorsi }}
+          key: ${{ steps.cache.outputs.chiave }}
 
   build:
     needs: cambi
