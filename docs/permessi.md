@@ -62,7 +62,7 @@ per questo il wrapper `catena.yml` li dichiara job per job. Dentro la catena:
 
 | Job | Permessi | Token |
 |---|---|---|
-| `agente` | `contents: read`, `issues: read` | nessun `GH_TOKEN` nel passo di Claude |
+| `agente` | `contents: read`, `issues: read`, `packages: read` (il `container` su ghcr.io) | nessun `GH_TOKEN` nel passo di Claude |
 | `esito`, `avvio`, `guardiano`, `pr-chiusa` | `contents: write` (solo esito e pr-chiusa), `issues: write`, `actions: write`, `pull-requests: write` | `github.token` |
 | `chiusura`, `unione` | `issues: write`, `pull-requests: write`, environment `agenti` | `github.token` per le issue, App per PR, push e merge |
 
@@ -105,3 +105,4 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | Tipi rossi tre volte su un sotto-task che toglie file | il developer non poteva cancellare file della base | `rimuovi.sh` tra gli strumenti del developer |
 | Catena non trovata al checkout | repo della catena privato | pubblico, oppure `CATENA_TOKEN` |
 | Chiamata al workflow riutilizzabile rifiutata | accesso ai workflow del repo della catena | repo pubblico, oppure Settings → Actions → Access |
+| Team leader "riformula" fermo dopo il commento di escalation, "not a git repository" | `git fetch` in `esito-team-leader.sh` prima di entrare nel checkout | `cd "$REPO_DIR"` prima dei comandi git; gli script che usano git entrano nel checkout in cima o con `ramo_checkout` |
