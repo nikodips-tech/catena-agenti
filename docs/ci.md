@@ -44,6 +44,16 @@ ripristinano quelle cartelle prima di `installa`. La chiave è l'hash dei file d
   lockfile tornerebbe quello vecchio e `installato_se` salterebbe `installa`.
 - Le cartelle vanno in `.gitignore` (il preflight lo controlla) e fuori dal lint.
 
+## Container privato su ghcr.io
+
+Se il `container` sta su `ghcr.io`, i job `lint`, `tipi`, `test`, `test-db` e il developer
+lo scaricano prima con `scripts/immagine.sh`: login con il token del job, pull e logout, così
+le credenziali non restano a Claude né al codice della PR. Il token legge un pacchetto privato
+se il repository ha accesso (Package settings → Manage Actions access; ce l'ha già se
+l'immagine la pubblica un suo workflow). Per questo i job chiedono `packages: read`, e il
+wrapper deve concederlo: in `ci.yml` in cima e in `catena.yml` nel job `agente`, come nel
+modello.
+
 Controlli che un progetto ha e la CI condivisa no: si propongono nel resoconto della
 migrazione e si decide se generalizzarli (`prompt/regole-sessione.md`).
 

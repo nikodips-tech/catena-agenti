@@ -24,7 +24,7 @@ runner. Devono essere **gli stessi della CI**.
 | Chiave | Esempio | Note |
 |---|---|---|
 | `cartella` | `app` | dove stanno package.json, composer.json…; `.` per la radice |
-| `container` | `node:22-alpine` | immagine; vuoto = direttamente sul runner |
+| `container` | `node:22-alpine` | immagine; vuoto = direttamente sul runner. Su ghcr.io anche privata (`docs/ci.md`) |
 | `container_rete` | `host` | rete di `docker run` (serve per i test con database) |
 | `container_opzioni` | `-e TZ=Europe/Rome` | altre opzioni di `docker run` |
 | `installa` | `npm ci --no-audit --no-fund --silent` | dipendenze, prima di Claude |

@@ -82,6 +82,7 @@ jobs:
       issues: write
       actions: write
       pull-requests: write
+      packages: read   # il container su ghcr.io, anche privato
     uses: nikodips-tech/catena-agenti/.github/workflows/agente.yml@v1
     with:
       ruolo: ${{ inputs.passo }}
