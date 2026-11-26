@@ -93,6 +93,7 @@ if [ "$azione" = bloccato ]; then
 fi
 
 # Si tolgono dal ramo i tentativi del sotto-task: si riparte puliti
+cd "$REPO_DIR"
 git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
 prima_di=$(commit_prima_di "$ramo" "$SOTTOTASK" "$base" || true)
 if [ -n "$prima_di" ]; then
