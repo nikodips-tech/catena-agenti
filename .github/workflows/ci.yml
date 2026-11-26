@@ -104,7 +104,7 @@ jobs:
         if: env.CODICE == 'si'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash "$CATENA/scripts/immagine.sh"
+        run: bash "$CATENA/scripts/immagine.sh" "${{ matrix.controllo == 'test-db' && 'test_db' || matrix.controllo }}"
       - name: ${{ matrix.controllo }}
         if: env.CODICE == 'si'
         run: bash "$CATENA/scripts/ci/controllo.sh" "${{ matrix.controllo }}"

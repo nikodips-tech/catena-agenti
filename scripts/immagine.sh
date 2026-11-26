@@ -3,10 +3,12 @@
 # (GH_TOKEN, permesso packages: read), pull e logout. L'immagine resta in locale per docker run,
 # le credenziali spariscono prima che girino Claude o il codice della PR.
 # Altri registri o nessun container: niente, docker run la scarica da sé.
+# Uso: immagine.sh [chiave]: con la chiave di un controllo (lint, test_db…) vuota, niente.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 cd "$REPO_DIR" || exit 1
 
+[ -z "${1:-}" ] || [ -n "$(cfg "$1")" ] || exit 0
 immagine=$(cfg container)
 case "$immagine" in ghcr.io/*) ;; *) exit 0 ;; esac
 
