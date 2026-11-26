@@ -132,17 +132,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash "$CATENA/scripts/immagine.sh"
 
+      # Le dipendenze nuove dichiarate nel sotto-task, con la rete e prima di Claude (chiave
+      # `dipendenze`): se non si aggiungono il tentativo fallisce senza Claude
+      - name: Dipendenze nuove
+        id: dipendenze
+        if: inputs.ruolo == 'developer'
+        run: bash "$CATENA/scripts/dipendenze.sh"
+
       # Le dipendenze prima di Claude: così il loro output non entra nel suo contesto
       - name: Dipendenze
-        if: inputs.ruolo == 'developer'
+        if: inputs.ruolo == 'developer' && steps.dipendenze.outputs.esito != 'ko'
         run: bash "$CATENA/scripts/controlli.sh" install
 
       - name: Claude Code
+        if: steps.dipendenze.outputs.esito != 'ko'
         run: npm install -g --silent "@anthropic-ai/claude-code@${{ inputs.claude_code_versione }}"
 
       # Nessun GH_TOKEN in questo passo: Claude vede solo il checkout.
       # Stessi tetti di scripts/ruoli.sh e docs/specifica.md
       - name: Agente
+        if: steps.dipendenze.outputs.esito != 'ko'
         timeout-minutes: ${{ fromJSON('{"team-leader":20,"developer":55,"revisore":25,"editor":15}')[inputs.ruolo] }}
         continue-on-error: true
         env:

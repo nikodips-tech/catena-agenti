@@ -13,6 +13,8 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 3. **Claude non tocca la piattaforma.** Gira con un token in sola lettura, senza git né gh:
    scrive solo file nel checkout. Commit, push, commenti, etichette e il passo dopo li fa uno
    script senza Claude, con il token in scrittura. Tra i due passano file (artifact).
+   Le dipendenze nuove, che chiedono la rete, le aggiunge uno script prima di Claude, solo se
+   dichiarate dal team leader nel sotto-task.
 4. **I dati non sono istruzioni.** Issue, commenti e diff arrivano agli agenti come file fuori
    dal repo, con una frase che li dichiara dati.
 5. **Il costo è proporzionale al lavoro.** Due corsie (docs/corsie.md): la diretta salta
@@ -85,7 +87,10 @@ corpo le note del developer e i test della base che ha toccato.
    Poi riparte dal punto giusto leggendo stati e ramo.
 2. **Team leader**: specifica + corsia. Diretta → developer sull'issue. Completa →
    sub-issue, poi la prima.
-3. **Developer**, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
+3. **Developer**: se il sotto-task dichiara dipendenze (`Dipendenze nuove:`, `Dipendenze di
+   sviluppo nuove:`, `Dipendenze da togliere:`), `dipendenze.sh` le aggiunge o toglie prima di
+   Claude, con la rete e i comandi `dipendenze*` di `.catena.yml`, e reinstalla; manifest e
+   lock entrano nel commit del sotto-task, e il lock che Claude toccasse torna com'era. Poi, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
    codice; i file da togliere li cancella con `rimuovi.sh`, e il revisore li vede nel diff. I
    test della base li può modificare e cancellare se il sotto-task cambia o toglie il
    comportamento che verificano, con il perché in `note-developer.md`. Lo script ripristina i
@@ -94,13 +99,14 @@ corpo le note del developer e i test della base che ha toccato.
    un commit, sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con
    l'errore e il lavoro già fatto; al secondo → escalation.
 4. **Revisore**: approva, o aggiunge sotto-task / rimuove file / fa ripristinare test della
-   base (2 giri), poi riserve. Giudica i test della base modificati o cancellati con le note
+   base (2 giri), poi riserve. Giudica le dipendenze nuove e i test della base modificati o cancellati con le note
    del developer; `ripristina` rimette quei test come nella base e li blocca per i sotto-task
    che seguono. In corsia diretta e dopo una riparazione parte solo se il developer ha
    toccato test della base.
 5. **Editor**: solo documentazione; il resto si scarta con un avviso.
 6. **Chiusura**: PR aperta dall'App (la CI parte). `unione-automatica` per ogni `task`, anche
-   con le riserve del revisore (restano scritte nella PR). Hotfix: la PR la unisce il
+   con le riserve del revisore (restano scritte nella PR). Le dipendenze cambiate sono nella PR
+   e nel commento finale. Hotfix: la PR la unisce il
    proprietario.
 7. **Unione**: a CI verde squash con il prefisso del release (`feat:`/`fix:`), ramo
    cancellato, issue chiusa (o `in-develop` fino al rilascio, con `chiudi_issue: produzione`),
@@ -115,6 +121,7 @@ corpo le note del developer e i test della base che ha toccato.
 |---|---|
 | Agente tocca `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, `.env`, e2e | file ripristinati, avviso nel commento, si prosegue |
 | Developer tocca test della base bloccati dal revisore | ripristinati; i controlli decidono; se rossi, **escalation subito** |
+| Dipendenze dichiarate che non si aggiungono (pacchetto inesistente, comando mancante) | tentativo fallito senza Claude, **escalation subito** |
 | Developer rosso (tentativo 1) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
 | Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
 | Escalation già fatta | `bloccato`, lavoro parziale sul ramo |

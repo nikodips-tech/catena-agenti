@@ -12,6 +12,10 @@ container: node:22-alpine
 container_rete: host
 installa: npm ci --no-audit --no-fund --silent
 installato_se: node_modules
+# Dipendenze nuove dichiarate dal team leader: manifest e lock senza eseguire codice dei pacchetti
+dipendenze: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+dipendenze_sviluppo: npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-dev
+dipendenze_togli: npm uninstall --package-lock-only --ignore-scripts --no-audit --no-fund
 lint: npm run -s lint -- --quiet && npm run -s format:check
 tipi: npm run -s typecheck
 test: npm test -s -- --reporter=dot

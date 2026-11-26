@@ -29,6 +29,10 @@ runner. Devono essere **gli stessi della CI**.
 | `container_opzioni` | `-e TZ=Europe/Rome` | altre opzioni di `docker run` |
 | `installa` | `npm ci --no-audit --no-fund --silent` | dipendenze, prima di Claude |
 | `installato_se` | `node_modules` | percorso (dalla cartella) che, se esiste, evita di rifare `installa` |
+| `dipendenze` | `npm install --package-lock-only --ignore-scripts --no-audit --no-fund` | aggiunge le dipendenze dichiarate nel sotto-task (`Dipendenze nuove:`): in coda i nomi. Gira prima di Claude, con la rete, nel `container`; aggiorna manifest e lock senza eseguire codice dei pacchetti. Vuoto = il developer non può aggiungere dipendenze |
+| `dipendenze_sviluppo` | `npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-dev` | lo stesso per `Dipendenze di sviluppo nuove:` |
+| `dipendenze_togli` | `npm uninstall --package-lock-only --ignore-scripts --no-audit --no-fund` | lo stesso per `Dipendenze da togliere:` |
+| `file_lock` | `(^\|/)package-lock\.json$` | i lock (regex) che, con una chiave `dipendenze*`, scrive solo la catena: se li tocca Claude tornano com'erano. Predefinito: i lock di npm, yarn, pnpm, composer, cargo, poetry, uv, bundler. Non vanno in `file_protetti` |
 | `cache` | `.cache/npm .cache/cargo` | cartelle (dalla cartella, ignorate da git) da tenere in cache tra un giro e l'altro; vuoto = niente cache (`docs/ci.md`) |
 | `cache_chiave` | `package-lock.json Cargo.lock` | file (dalla cartella) il cui cambio rifà la cache |
 | `lint` | `npm run -s lint -- --quiet && npm run -s format:check` | solo errori |

@@ -45,6 +45,17 @@ Chi ha scritto l'issue può proporre una corsia: tienine conto, ma decidi tu.
 - I test della base li può cambiare il developer se il sottotask cambia o toglie il
   comportamento che verificano: non devi elencarli.
 
+## Dipendenze nuove
+Il developer non ha rete: un pacchetto nuovo lo aggiunge la catena prima di lui, solo se lo
+dichiari tu nel sottotask (`dipendenze`, e `dipendenze_sviluppo` per quelle che servono solo a
+sviluppo e test), o al livello della specifica in corsia diretta.
+- Solo se serve davvero: prima ciò che c'è già nel progetto o nella libreria standard.
+- Pacchetti noti e mantenuti, con la versione se conta (`nome@^1.2`); un nome per voce, senza
+  spazi.
+- Solo se `.catena.yml` ha la chiave `dipendenze`; senza, fai una domanda al proprietario.
+- Nel sottotask che per primo le usa: i successivi le trovano già sul ramo.
+- `dipendenze_togli` toglie una dipendenza che il lavoro rende inutile.
+
 ## Quando fare una domanda
 Se ricevi risposte del proprietario, usale e non ripetere la domanda.
 Una domanda al posto della specifica solo se la richiesta non è chiara o tocca cose delicate
@@ -73,10 +84,12 @@ Specifica:
 { "domanda": null,
   "corsia": "diretta | completa",
   "specifica": "markdown",
-  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia dove serve …", "test": true } ] }
+  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia dove serve …", "test": true,
+                   "dipendenze": [], "dipendenze_sviluppo": [] } ] }
 ```
 Con `domanda` piena, `specifica` è vuota e `sottotask` è `[]`. Con `corsia` `diretta`,
-`sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi.
+`sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi, e
+`dipendenze`, `dipendenze_sviluppo` e `dipendenze_togli` stanno accanto a `specifica`. Tutte facoltative.
 
 Escalation:
 ```json

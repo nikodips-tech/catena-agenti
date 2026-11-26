@@ -19,13 +19,15 @@ avviso_file() { # <titolo> <elenco>
   [ -n "$2" ] || return 0
   printf '%s:\n```\n%s\n```\n\n' "$1" "$2" >> "$ESITO_DIR/avvisi.md"
 }
-# ripristina <file…>: come al commit di partenza (o cancellati se nuovi)
-ripristina() {
-  local f
+# ripristina_da <commit> <file…>: come in quel commit (o cancellati se lì non c'erano)
+ripristina_da() {
+  local f da=$1; shift
   for f in "$@"; do
-    if git cat-file -e "$INIZIO:$f" 2> /dev/null; then git checkout -q "$INIZIO" -- "$f"; else git rm -q --cached -- "$f" > /dev/null 2>&1 || true; rm -f -- "$f"; fi
+    if git cat-file -e "$da:$f" 2> /dev/null; then git checkout -q "$da" -- "$f"; else git rm -q --cached -- "$f" > /dev/null 2>&1 || true; rm -f -- "$f"; fi
   done
 }
+# ripristina <file…>: come al commit di partenza
+ripristina() { ripristina_da "$INIZIO" "$@"; }
 # fotografa: indice, elenco dei file e patch rispetto al commit di partenza
 fotografa() {
   git add -A -- . ":!esito.json" > /dev/null 2>&1 || true
@@ -39,6 +41,17 @@ stato() { echo "$1" > "$ESITO_DIR/stato"; }
 avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"
 fotografa
 
+# Dipendenze dichiarate non aggiunte (dipendenze.sh): Claude non è partito, tentativo fallito
+if [ "$ruolo" = developer ] && [ -s "$ESITO_DIR/dipendenze-fallite.md" ]; then
+  stato fallito
+  cp "$ESITO_DIR/dipendenze-fallite.md" "$ESITO_DIR/messaggio.md"
+  echo "dipendenze dichiarate non aggiunte" > "$ESITO_DIR/motivo.txt"
+  : > "$ESITO_DIR/test-ripristinati.txt"
+  echo "Claude non è partito" > "$ESITO_DIR/consumo.txt"
+  log "developer: dipendenze non aggiunte"
+  exit 0
+fi
+
 case "$ruolo" in
   team-leader|revisore)
     # Non devono toccare file: se lo fanno, le modifiche si ignorano
@@ -48,6 +61,11 @@ case "$ruolo" in
   developer)
     e2e=$(grep -P "$RE_E2E" "$ESITO_DIR/file.txt" || true)
     if [ -n "$e2e" ]; then mapfile -t f <<< "$e2e"; ripristina "${f[@]}"; avviso_file "Test e2e toccati e ripristinati" "$e2e"; fi
+    # Con la chiave `dipendenze` il lock lo scrive solo dipendenze.sh: il resto torna com'era
+    if dipendenze_attive; then
+      lock=$(git diff --cached --name-only --no-renames "${DOPO_DIPENDENZE:-$INIZIO}" | grep -P "$RE_LOCK" || true)
+      if [ -n "$lock" ]; then mapfile -t f <<< "$lock"; ripristina_da "${DOPO_DIPENDENZE:-$INIZIO}" "${f[@]}"; avviso_file "Lock toccati e ripristinati (le dipendenze nuove le aggiunge la catena, se dichiarate nel sotto-task)" "$lock"; fi
+    fi
     # I test della base si possono modificare e cancellare (il revisore li giudica). Si
     # ripristinano solo quelli che il revisore ha bloccato (test-bloccati.txt, contesto.sh)
     bloccati="$CONTESTO/test-bloccati.txt"; [ -f "$bloccati" ] || : > "$bloccati"
