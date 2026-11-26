@@ -65,6 +65,9 @@ jobs:
     name: ${{ matrix.controllo }}
     runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read   # il container su ghcr.io, anche privato (scripts/immagine.sh)
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +100,11 @@ jobs:
           path: ${{ steps.cache.outputs.percorsi }}
           key: ${{ steps.cache.outputs.chiave }}
           restore-keys: ${{ steps.cache.outputs.prefisso }}
+      - name: Immagine del container
+        if: env.CODICE == 'si'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "$CATENA/scripts/immagine.sh"
       - name: ${{ matrix.controllo }}
         if: env.CODICE == 'si'
         run: bash "$CATENA/scripts/ci/controllo.sh" "${{ matrix.controllo }}"

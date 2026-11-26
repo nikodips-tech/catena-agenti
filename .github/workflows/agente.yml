@@ -83,6 +83,7 @@ jobs:
     permissions:
       contents: read
       issues: read
+      packages: read   # il container su ghcr.io, anche privato (scripts/immagine.sh)
     steps:
       - name: La catena
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -123,6 +124,13 @@ jobs:
           path: ${{ steps.cache.outputs.percorsi }}
           key: ${{ steps.cache.outputs.chiave }}
           restore-keys: ${{ steps.cache.outputs.prefisso }}
+
+      # Il container su ghcr.io: login, pull e logout prima di Claude
+      - name: Immagine del container
+        if: inputs.ruolo == 'developer'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "$CATENA/scripts/immagine.sh"
 
       # Le dipendenze prima di Claude: così il loro output non entra nel suo contesto
       - name: Dipendenze

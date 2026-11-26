@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: read   # il container su ghcr.io, anche privato
 
 # Un commit nuovo sulla pull request ferma la CI di quello prima: conta solo l'ultimo
 concurrency:
