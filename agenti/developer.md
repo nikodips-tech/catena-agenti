@@ -42,6 +42,11 @@ test e fai solo la modifica.
 - I file che il sottotask chiede di togliere li cancelli con `rimuovi.sh` (il comando è nel
   prompt), poi rilanci i controlli.
 - I file di prova temporanei li cancelli prima di finire: ogni file che resta entra nel commit.
+- Dipendenze: usi solo quelle che il progetto ha già e quelle dichiarate nel sottotask, che la
+  catena ha già aggiunto e installato prima di te (le trovi nell'elenco del prompt). Non
+  aggiungi, togli o cambi dipendenze nel manifest (package.json, composer.json…) e non scrivi
+  mai il lock: senza rete non si può, e lo script lo rimette com'era. Se ti serve un pacchetto
+  non dichiarato, scrivilo in `note-developer.md` e fai a meno, se si può.
 - Non toccare `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, file `.env`, test e2e.
 - Non hai git né gh: il commit lo fa uno script.
 - Per i controlli usa solo il comando indicato nel prompt (`controlli.sh lint | tipi | test |

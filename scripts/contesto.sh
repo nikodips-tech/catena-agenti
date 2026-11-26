@@ -97,6 +97,9 @@ case "$ruolo" in
       if [ -n "$corpo" ]; then printf '%s\n%s\n\n' "$(git show -s --format=%s "$c")" "$corpo"; fi
     done > "$CONTESTO/note-developer.md"
     descrivi note-developer.md "le note del developer sui sotto-task: perché ha toccato test della base o fatto scelte particolari (vuoto se nessuna)"
+    # Le dipendenze nuove le scrive esito-developer.sh nel corpo dei commit (righe dell'issue)
+    git log --format=%b "origin/$BASE..HEAD" | dipendenze_righe > "$CONTESTO/dipendenze.txt"
+    descrivi dipendenze.txt "le dipendenze nuove aggiunte sul ramo (vuoto se nessuna): giudicale"
     pf_issue_commenti "$ISSUE" | jq -r '[.[] | select(.corpo | startswith("## Revisione")) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/revisioni-precedenti.md"
     descrivi revisioni-precedenti.md "le tue revisioni precedenti su questa issue (vuoto al primo giro): non ripetere richieste già fatte" ;;
   editor)

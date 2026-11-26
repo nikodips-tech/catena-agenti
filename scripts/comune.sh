@@ -147,11 +147,33 @@ corsia_di() { if grep -qiE '^Corsia:[[:space:]]*diretta' <<< "$1"; then echo dir
 # senza_test <corpo sottotask>: vero se il corpo ha la riga "Test: no"
 senza_test() { tr -d '\r' <<< "$1" | grep -qx 'Test: no'; }
 
+# elenco_riga <testo> <prefisso>: i valori della riga "<prefisso>: a, b", uno per riga
+elenco_riga() {
+  tr -d '\r' <<< "$1" | sed -n "s/^$2:[[:space:]]*//p" | tr ',' '\n' \
+    | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//' | grep -v '^$' || true
+}
+
 # test_bloccati <testo>: i test della base che il revisore ha fatto ripristinare e che il
 # developer non può toccare (la riga "Test bloccati: a, b" del sotto-task), uno per riga
-test_bloccati() {
-  tr -d '\r' <<< "$1" | sed -n 's/^Test bloccati:[[:space:]]*//p' | tr ',' '\n' \
-    | sed -E 's/^[[:space:]`]+//; s/[[:space:]`]+$//' | grep -v '^$' || true
+test_bloccati() { elenco_riga "$1" "Test bloccati"; }
+
+# Dipendenze nuove dichiarate nel sotto-task (o nella specifica in corsia diretta): le aggiunge
+# dipendenze.sh prima di Claude. Un nome è una parola sola (niente spazi né caratteri della shell)
+T_DIP="Dipendenze nuove"; T_DIP_SVILUPPO="Dipendenze di sviluppo nuove"; T_DIP_TOGLI="Dipendenze da togliere"
+RE_PACCHETTO='^[A-Za-z0-9@][A-Za-z0-9@/._~^:+-]*$'
+# dipendenze_attive: vero se .catena.yml ha almeno un comando delle dipendenze
+dipendenze_attive() { [ -n "$(cfg dipendenze)$(cfg dipendenze_sviluppo)$(cfg dipendenze_togli)" ]; }
+# Con le dipendenze attive il lock lo scrive solo dipendenze.sh: raccolta.sh rimette il resto
+RE_LOCK=$(cfg file_lock '(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock)$')
+# dipendenze_righe: da stdin, le righe delle dipendenze (nuove, di sviluppo, da togliere)
+dipendenze_righe() { tr -d '\r' | grep -E "^($T_DIP|$T_DIP_SVILUPPO|$T_DIP_TOGLI):" | sort -u || true; }
+
+# righe_dipendenze <file esito> <elemento jq>: le righe delle dipendenze dichiarate
+righe_dipendenze() {
+  local d
+  d=$(jq -r "($2.dipendenze // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP" "$d"
+  d=$(jq -r "($2.dipendenze_sviluppo // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_SVILUPPO" "$d"
+  d=$(jq -r "($2.dipendenze_togli // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_TOGLI" "$d"
 }
 
 # righe_sottotask <file esito> <elemento jq>: le righe di servizio in fondo al corpo di un
@@ -161,12 +183,32 @@ righe_sottotask() {
   [ "$(jq -r "$2.test == false" "$1")" != true ] || printf '\nTest: no\n'
   tb=$(jq -r "($2.test_bloccati // []) | join(\", \")" "$1")
   [ -z "$tb" ] || printf '\nTest bloccati: %s\n' "$tb"
+  righe_dipendenze "$1" "$2"
 }
 
+# Validazione jq delle dipendenze dichiarate di un oggetto (sotto-task o specifica diretta)
+DIPENDENZE_VALIDE='(((.dipendenze // []) | type) == "array" and ((.dipendenze_sviluppo // []) | type) == "array"
+  and ((.dipendenze_togli // []) | type) == "array"
+  and all(((.dipendenze // []) + (.dipendenze_sviluppo // []) + (.dipendenze_togli // []))[]; type == "string" and test("'"$RE_PACCHETTO"'")))'
 # Validazione jq di un elenco di sotto-task (team leader e revisore)
 SOTTOTASK_VALIDI='all(.[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string"
   and ((.test // true) | type) == "boolean"
-  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0))'
+  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0)
+  and '"$DIPENDENZE_VALIDE"')'
+
+# esegui <comando shell>: nella `cartella` del progetto, nel `container` se configurato
+# (controlli.sh, dipendenze.sh)
+esegui() {
+  local cartella container
+  cartella=$(cfg cartella .); container=$(cfg container)
+  if [ -n "$container" ]; then
+    # shellcheck disable=SC2046
+    docker run --rm --network "$(cfg container_rete host)" -e NO_COLOR=1 -e FORCE_COLOR=0 -e CI=1 $(cfg container_opzioni) \
+      -v "$REPO_DIR/$cartella:/lavoro" -w /lavoro "$container" sh -c "$1"
+  else
+    (cd "$REPO_DIR/$cartella" && NO_COLOR=1 FORCE_COLOR=0 CI=1 sh -c "$1")
+  fi
+}
 
 # ---------------------------------------------------------------- git
 git_identita() {

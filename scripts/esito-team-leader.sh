@@ -54,6 +54,7 @@ if [ -z "${SOTTOTASK:-}" ]; then
     and (((.domanda // "") != "") or
          ((.specifica | type) == "string" and (.specifica | length) > 0
           and ((.corsia // "completa") | IN("diretta", "completa"))
+          and (. | '"$DIPENDENZE_VALIDE"')
           and ((.corsia // "completa") == "diretta" or ((.sottotask | type) == "array" and (.sottotask | length) > 0 and (.sottotask | '"$SOTTOTASK_VALIDI"')))))' \
     || non_valido "formato non previsto: servono domanda, oppure specifica, corsia e sottotask"
 
@@ -65,7 +66,7 @@ if [ -z "${SOTTOTASK:-}" ]; then
   fi
 
   corsia=$(jq -r '.corsia // "completa"' "$f")
-  { echo "$T_SPECIFICA"; echo; echo "Corsia: $corsia"; echo; jq -r '.specifica' "$f"; echo; echo "_${cons}_"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
+  { echo "$T_SPECIFICA"; echo; echo "Corsia: $corsia"; echo; jq -r '.specifica' "$f"; [ "$corsia" != diretta ] || righe_dipendenze "$f" ""; echo; echo "_${cons}_"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
 
   if [ "$corsia" = diretta ]; then
     pf_commenta_testo "$ISSUE" "Corsia diretta: parte il developer, codice e test insieme, poi la pull request."

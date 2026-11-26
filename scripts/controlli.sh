@@ -12,20 +12,7 @@ cd "$REPO_DIR"
 mkdir -p "$LOG_DIR"
 
 CARTELLA=$(cfg cartella .)
-CONTAINER=$(cfg container)
-RETE=$(cfg container_rete host)
-OPZIONI=$(cfg container_opzioni)
-
-# esegui <comando shell>: nella cartella del progetto, nel container se configurato
-esegui() {
-  if [ -n "$CONTAINER" ]; then
-    # shellcheck disable=SC2086
-    docker run --rm --network "$RETE" -e NO_COLOR=1 -e FORCE_COLOR=0 -e CI=1 $OPZIONI \
-      -v "$PWD/$CARTELLA:/lavoro" -w /lavoro "$CONTAINER" sh -c "$1"
-  else
-    (cd "$CARTELLA" && NO_COLOR=1 FORCE_COLOR=0 CI=1 sh -c "$1")
-  fi
-}
+# esegui (comune.sh): nella cartella del progetto, nel container se configurato
 
 # controlla <nome> <comando>: log completo su file, a video l'esito
 controlla() {
