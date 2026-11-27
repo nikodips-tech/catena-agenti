@@ -5,6 +5,7 @@
 # - escalation (SOTTOTASK pieno): il sotto-task è fallito MAX_TENTATIVI volte, o subito se ha
 #   toccato test bloccati dal revisore; il team leader decide
 #   riformula | bloccato (docs/specifica.md, Escalation).
+# - domanda del developer (SOTTOTASK pieno con una domanda aperta): risposta | domanda | riformula.
 # Un esito.json mancante o non valido si ritenta una volta, poi la palla al proprietario (`turn-human`).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
@@ -78,12 +79,34 @@ if [ -z "${SOTTOTASK:-}" ]; then
   exit 0
 fi
 
-# ------------------------------------------------------------------ escalation
-json_valido "$f" '(.azione | IN("riformula", "bloccato")) and (.nota | type) == "string"
-  and (.azione != "riformula" or ((.sottotask | type) == "array" and (.sottotask | length) > 0 and (.sottotask | '"$SOTTOTASK_VALIDI"')))' \
-  || non_valido "formato non previsto: servono azione (riformula | bloccato), nota e, per riformula, sottotask"
-
-azione=$(jq -r '.azione' "$f"); nota=$(jq -r '.nota' "$f")
+# ------------------------------------------------------------------ escalation o domanda del developer
+# Con una domanda del developer aperta sul sotto-task si risponde; altrimenti è un'escalation
+SOTTOTASK_RIFORMULA='(.azione != "riformula" or ((.sottotask | type) == "array" and (.sottotask | length) > 0 and (.sottotask | '"$SOTTOTASK_VALIDI"')))'
+if domanda_aperta "$SOTTOTASK"; then
+  json_valido "$f" '(.azione | IN("risposta", "domanda", "riformula")) and ((.nota // "") | type) == "string"
+    and (.azione != "risposta" or ((.risposta | type) == "string" and (.risposta | length) > 0))
+    and (.azione != "domanda" or ((.domanda | type) == "string" and (.domanda | length) > 0))
+    and '"$SOTTOTASK_RIFORMULA" \
+    || non_valido "formato non previsto: servono azione (risposta | domanda | riformula) e il suo testo (risposta, domanda o sottotask)"
+  azione=$(jq -r '.azione' "$f")
+  if [ "$azione" = risposta ]; then
+    # Il developer riparte con lo stesso tentativo della domanda
+    tentativo=$(commento_con_titolo "$SOTTOTASK" "$T_DOMANDA_DEV" | tr -d '\r' | sed -n 's/^Tentativo:[[:space:]]*\([0-9][0-9]*\).*$/\1/p' | sed -n 1p)
+    printf '%s\n\n%s\n\n_%s_\n' "$T_RISPOSTA" "$(jq -r '.risposta' "$f")" "$cons" | pf_issue_commenta "$SOTTOTASK" -
+    passo developer "$ISSUE" "$SOTTOTASK" "${tentativo:-1}"
+    exit 0
+  fi
+  if [ "$azione" = domanda ]; then
+    printf '%s\n\nIl developer, sul sotto-task #%s, ha bisogno di una scelta tua:\n\n%s\n\nRispondi con un commento: la catena riparte da sola.\n' "$T_DOMANDA" "$SOTTOTASK" "$(jq -r '.domanda' "$f")" | pf_issue_commenta "$ISSUE" -
+    fermo "$ISSUE" "$SOTTOTASK"
+    exit 0
+  fi
+  nota=$(jq -r '.nota // ""' "$f")
+else
+  json_valido "$f" '(.azione | IN("riformula", "bloccato")) and (.nota | type) == "string" and '"$SOTTOTASK_RIFORMULA" \
+    || non_valido "formato non previsto: servono azione (riformula | bloccato), nota e, per riformula, sottotask"
+  azione=$(jq -r '.azione' "$f"); nota=$(jq -r '.nota' "$f")
+fi
 printf '%s\n\n%s: %s\n\n_%s_\n' "$T_ESCALATION" "$azione" "$nota" "$cons" | pf_issue_commenta "$SOTTOTASK" -
 
 if [ "$azione" = bloccato ]; then

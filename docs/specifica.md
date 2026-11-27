@@ -82,6 +82,8 @@ Lo stato di un'issue è nei suoi commenti, riconosciuti dal titolo con cui comin
 | `## Revisione: sottotask aggiunti` / `## Revisione: file rimossi` | issue | un giro di revisione |
 | `## Revisione: con riserve` | issue | giri finiti: la PR si apre e si unisce da sola, con le riserve scritte |
 | `## Escalation` | sotto-task | il team leader è stato chiamato (al massimo una volta) |
+| `## Domanda del developer` | sotto-task | il developer chiede al team leader (riga `Tentativo: n`); al massimo 2 per sotto-task |
+| `## Risposta del team leader` | sotto-task | la risposta: il developer riparte dallo stesso tentativo. Una domanda è aperta se l'ultimo tra questi due commenti è la domanda |
 | `## Riparazione n` | issue | la CI della PR era rossa, il developer la ripara (al massimo una) |
 | `## Pull request pronta` | issue | la PR è aperta |
 
@@ -111,7 +113,8 @@ corpo le note del developer e i test della base che ha toccato.
    file protetti, gli e2e e i test bloccati dal revisore (`Test bloccati:` del sotto-task),
    formatta tutto il ramo, esegue lint, tipi, test (e test con database) come la CI. Verde →
    un commit, sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con
-   l'errore e il lavoro già fatto; al secondo → escalation.
+   l'errore e il lavoro già fatto; al secondo → escalation. Se la specifica non regge può
+   chiedere al team leader (`domanda-developer.md`): la risposta arriva come file `domande.md`.
 4. **Revisore**: approva, o aggiunge sotto-task / rimuove file / fa ripristinare test della
    base (2 giri), poi riserve. Giudica le dipendenze (da `manifest.diff`: i manifest cambiati sul
    ramo; il diff completo è senza lock) e i test della base modificati o cancellati con le note
@@ -136,6 +139,7 @@ corpo le note del developer e i test della base che ha toccato.
 | Agente tocca `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, `.env`, e2e | file ripristinati, avviso nel commento, si prosegue |
 | Developer tocca test della base bloccati dal revisore | ripristinati; i controlli decidono; se rossi, **escalation subito** |
 | `aggiorna` fallisce dopo il developer (pacchetto inesistente, rete) | tentativo fallito con il log, come un controllo rosso |
+| Il developer non può decidere (specifica contraddittoria, informazione mancante) | `domanda-developer.md`: patch in `wip: #n domanda`, domanda sul sotto-task, risponde il team leader (`risposta`, `domanda` al proprietario, o `riformula`); oltre 2 domande conta come tentativo fallito |
 | Developer rosso (tentativo 1) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
 | Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` (azione: la palla al proprietario) |
 | Escalation già fatta | `turn-human`, lavoro parziale sul ramo |
@@ -175,6 +179,7 @@ porta a `turn-human`; quella dell'editor fuori da `docs` si scarta.
 | Giri di revisione | 2 | `MAX_GIRI_REVISIONE` |
 | Escalation per sottotask | 1 | `MAX_ESCALATION` |
 | Riparazioni per PR | 1 | `MAX_RIPARAZIONI` |
+| Domande del developer per sotto-task | 2 | `MAX_DOMANDE` |
 | Fermo prima della ripresa del guardiano | 90 min | `guardiano_minuti` in `.catena.yml` |
 | Nota passata tra i passi | 3000 caratteri | `pf_passo_avvia` |
 | Diff passato al revisore | 200 kB | `contesto.sh` |

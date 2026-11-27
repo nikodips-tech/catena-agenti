@@ -79,6 +79,14 @@ test bloccati (il tentativo dopo rifarebbe la stessa modifica). Il revisore rice
 della base modificati (M) o cancellati (D) e le note, e li giudica; con `ripristina` lo script
 li rimette come nella base e li blocca per i sotto-task che seguono.
 
+**Domanda del developer.** Se la specifica o il sotto-task non reggono, il developer scrive
+`domanda-developer.md` e si ferma: la raccolta la sposta fuori dalla patch (stato `domanda`),
+`esito-developer.sh` tiene il lavoro fatto in `wip: #n domanda`, pubblica `## Domanda del
+developer` (con `Tentativo: n`) sul sotto-task e passa al team leader. Il team leader risponde
+(`## Risposta del team leader`, e il developer riparte con lo stesso tentativo), gira la domanda
+al proprietario (`turn-human`) o riformula. Al massimo 2 domande per sotto-task; l'avvio, dopo
+una domanda senza risposta, riparte dal team leader.
+
 ### Chiusura (`chiusura.sh`, App)
 PR dal ramo alla base, aperta dall'App: la CI parte da sola (con il token di Actions no). PR
 già aperta: commit vuoto dell'App per rilanciare la CI. Etichette sulla PR con il token di

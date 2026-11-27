@@ -74,6 +74,11 @@ if [ -z "$specifica" ]; then
   exit 0
 fi
 
+# Il developer ripartirebbe, ma se ha una domanda senza risposta tocca al team leader
+avvia_developer() {
+  if domanda_aperta "$1"; then passo team-leader "$ISSUE" "$1"; else passo developer "$ISSUE" "$1" 1; fi
+}
+
 git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
 pref=$(prefisso_di "$tipo")
 
@@ -82,7 +87,7 @@ prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ "$(corsia_di "$specifica")" = diretta ]; then
   # Corsia diretta: il developer lavora sull'issue stessa
   if ! commit_sul_ramo "$ramo" "$pref: #$ISSUE" "$base"; then
-    passo developer "$ISSUE" "$ISSUE" 1
+    avvia_developer "$ISSUE"
     exit 0
   fi
   # Lavoro finito: di norma la chiusura. Si prosegue come nella corsia completa se ci sono
@@ -97,7 +102,7 @@ if [ "$(corsia_di "$specifica")" = diretta ]; then
 fi
 
 if [ -n "$prima" ]; then
-  passo developer "$ISSUE" "$prima" 1
+  avvia_developer "$prima"
 elif pf_ramo_esiste "$ramo"; then
   # Sotto-task finiti: revisione, oppure chiusura se la revisione c'è già stata
   if [ "$(conta_commenti "$ISSUE" "$T_REV_OK" "$T_REV_RISERVE")" -gt 0 ]; then

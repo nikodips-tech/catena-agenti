@@ -14,6 +14,7 @@ mkdir -p "$ESITO_DIR" "$LOG_DIR"
 uscita=$(cat "$ESITO_DIR/claude-exit" 2> /dev/null || echo "?")
 [ -f esito.json ] && mv esito.json "$ESITO_DIR/esito.json"
 [ -f note-developer.md ] && mv note-developer.md "$ESITO_DIR/note.md"
+[ -f domanda-developer.md ] && mv domanda-developer.md "$ESITO_DIR/domanda.md"
 
 avviso_file() { # <titolo> <elenco>
   [ -n "$2" ] || return 0
@@ -65,6 +66,13 @@ case "$ruolo" in
     # Per esito-developer.sh: se i controlli falliscono, l'escalation parte subito
     printf '%s' "$toccati" > "$ESITO_DIR/test-ripristinati.txt"
     fotografa
+    # Una domanda al team leader: il lavoro fatto resta (patch), niente formattazione né controlli
+    if [ -s "$ESITO_DIR/domanda.md" ]; then
+      stato domanda
+      consumo "$ESITO_DIR/claude.json" > "$ESITO_DIR/consumo.txt"
+      log "developer: domanda al team leader, $(cat "$ESITO_DIR/consumo.txt")"
+      exit 0
+    fi
     # Formattazione di tutto ciò che cambia rispetto alla base, test compresi
     mapfile -t cambiati < <(git diff --cached --name-only --diff-filter=d --no-renames "origin/$BASE" || true)
     [ "${#cambiati[@]}" -eq 0 ] || bash "$CATENA/scripts/controlli.sh" formatta "${cambiati[@]}" > /dev/null 2>&1 || true

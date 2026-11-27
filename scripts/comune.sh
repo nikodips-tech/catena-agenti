@@ -24,6 +24,8 @@ CONFIG=${CATENA_CONFIG:-$REPO_DIR/.catena.yml}
 # Titoli dei commenti che fanno da stato
 T_SPECIFICA="## Specifica"
 T_DOMANDA="## Domanda"
+T_DOMANDA_DEV="## Domanda del developer"
+T_RISPOSTA="## Risposta del team leader"
 T_REV_OK="## Revisione: approvata"
 T_REV_SOTTOTASK="## Revisione: sottotask aggiunti"
 T_REV_RIMOSSI="## Revisione: file rimossi"
@@ -44,6 +46,7 @@ E_RETRO=retrospective; E_RETRO_OK=retrospective-approved
 MAX_TENTATIVI=2        # tentativi del developer per sottotask
 MAX_GIRI_REVISIONE=2   # giri di revisione prima delle riserve
 MAX_ESCALATION=1       # escalation al team leader per sottotask
+MAX_DOMANDE=2          # domande del developer al team leader per sottotask
 MAX_RIPARAZIONI=1      # riparazioni dopo una CI rossa
 
 # ---------------------------------------------------------------- configurazione
@@ -122,6 +125,19 @@ commento_con_titolo() { pf_issue_commenti "$1" | jq -r --arg t "$2" '[.[] | sele
 conta_commenti() {
   local issue=$1; shift
   pf_issue_commenti "$issue" | jq -r --args '[.[] | select(.corpo as $c | $ARGS.positional | any(. as $t | $c | startswith($t)))] | length' "$@"
+}
+
+# domanda_aperta <issue o sotto-task>: vero se, tra i commenti che cominciano con T_DOMANDA_DEV o
+# T_RISPOSTA, l'ultimo è una domanda del developer (il team leader non ha ancora risposto)
+domanda_aperta() {
+  pf_issue_commenti "$1" | jq -e --arg d "$T_DOMANDA_DEV" --arg r "$T_RISPOSTA" \
+    '[.[] | select(.corpo | startswith($d) or startswith($r))] | last | (.corpo // "") | startswith($d)' > /dev/null
+}
+
+# domande_md <issue o sotto-task>: le domande del developer e le risposte, in ordine
+domande_md() {
+  pf_issue_commenti "$1" | jq -r --arg d "$T_DOMANDA_DEV" --arg r "$T_RISPOSTA" \
+    '[.[] | select(.corpo | startswith($d) or startswith($r)) | .corpo] | join("\n\n---\n\n")'
 }
 
 # aspetta_produzione <base>: vero se l'issue, unita in quella base, resta aperta fino al rilascio

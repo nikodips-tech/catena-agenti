@@ -46,21 +46,29 @@ case "$ruolo" in
     pf_issue_commenti "$ISSUE" | jq -r --arg o "$PROPRIETARIO" '[.[] | select(.autore == $o) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/risposte.md"
     descrivi risposte.md "i commenti del proprietario sull'issue, cioè le risposte alle tue domande (vuoto se nessuno)"
     if [ -n "${SOTTOTASK:-}" ]; then
-      # Escalation: il sotto-task è fallito o ha toccato test bloccati
+      # Sotto-task: una domanda del developer da risolvere, oppure un'escalation (fallito o
+      # test bloccati toccati)
       specifica; sottotask_md
-      nota_md errore.log "le ultime righe dell'errore dell'ultimo tentativo del developer"
       git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
       if git show-ref -q --verify "refs/remotes/origin/$RAMO"; then
         git diff "origin/$BASE...origin/$RAMO" | limita 150000 > "$CONTESTO/lavoro.diff"
         descrivi lavoro.diff "tutto il lavoro sul ramo $RAMO rispetto a $BASE, compresi i test del sotto-task e i tentativi del developer (commit wip:)"
       fi
-      { echo "Il sotto-task #$SOTTOTASK è fallito $MAX_TENTATIVI volte, oppure subito perché il developer ha toccato test"
-        echo "bloccati dal revisore. Sei chiamato in escalation: decidi se il test è sbagliato, se il sotto-task va"
-        echo "riformulato in pezzi più piccoli o se serve davvero una persona (docs/specifica.md, Escalation)."
-        echo "Se l'errore dice che sono stati ripristinati test bloccati, decidi se tenerli bloccati (mettili in"
-        echo "test_bloccati dei sotto-task nuovi) o sbloccarli (omettili e spiega nella descrizione come vanno cambiati)."
-      } > "$CONTESTO/escalation.md"
-      descrivi escalation.md "perché sei stato chiamato"
+      if domanda_aperta "$SOTTOTASK"; then
+        domande_md "$SOTTOTASK" > "$CONTESTO/domande.md"
+        descrivi domande.md "le domande del developer su questo sotto-task e le tue risposte precedenti, in ordine: l'ultima è la domanda a cui rispondere"
+        echo "Il developer ti fa una domanda sul sotto-task #$SOTTOTASK: rispondi; se serve una scelta di prodotto chiedi al proprietario; se il sotto-task è sbagliato riformulalo." > "$CONTESTO/modo.md"
+        descrivi modo.md "perché sei stato chiamato"
+      else
+        nota_md errore.log "le ultime righe dell'errore dell'ultimo tentativo del developer"
+        { echo "Il sotto-task #$SOTTOTASK è fallito $MAX_TENTATIVI volte, oppure subito perché il developer ha toccato test"
+          echo "bloccati dal revisore. Sei chiamato in escalation: decidi se il test è sbagliato, se il sotto-task va"
+          echo "riformulato in pezzi più piccoli o se serve davvero una persona (docs/specifica.md, Escalation)."
+          echo "Se l'errore dice che sono stati ripristinati test bloccati, decidi se tenerli bloccati (mettili in"
+          echo "test_bloccati dei sotto-task nuovi) o sbloccarli (omettili e spiega nella descrizione come vanno cambiati)."
+        } > "$CONTESTO/escalation.md"
+        descrivi escalation.md "perché sei stato chiamato"
+      fi
     fi ;;
   developer)
     specifica
@@ -76,6 +84,8 @@ case "$ruolo" in
     # In corsia diretta e nelle riparazioni il sotto-task è l'issue: nessun test bloccato
     if [ "$SOTTOTASK" = "$ISSUE" ]; then : > "$CONTESTO/test-bloccati.txt"; else test_bloccati "$(cat "$CONTESTO/sottotask.md")" | sort -u > "$CONTESTO/test-bloccati.txt"; fi
     descrivi test-bloccati.txt "i test della base che il revisore ha fatto ripristinare: non toccarli, fai passare il codice (vuoto se nessuno)"
+    domande_md "$SOTTOTASK" > "$CONTESTO/domande.md"
+    descrivi domande.md "le tue domande precedenti e le risposte del team leader (vuoto se nessuna): valgono come parte del sotto-task"
     nota_md errore.txt "le ultime righe dell'errore del tentativo precedente, o i controlli falliti della CI da riparare"
     wip=$(git log --format=%s "origin/$BASE..HEAD" 2> /dev/null | grep -E "^wip: #$SOTTOTASK " | sed -n 1p || true)
     if [ -n "$wip" ]; then

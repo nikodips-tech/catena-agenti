@@ -9,6 +9,8 @@
 #   tentativo dopo corregge invece di rifare. Al fallimento di MAX_TENTATIVI escalation al
 #   team leader (una volta), poi `turn-human`. Subito, se la raccolta ha ripristinato test
 #   bloccati dal revisore.
+# - Domanda (stato `domanda`): il developer chiede al team leader; la patch resta come "wip: #<n>
+#   domanda", la domanda va sul sotto-task, risponde il team leader (al massimo MAX_DOMANDE).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 stato=$(cat "$ESITO_DIR/stato" 2> /dev/null || echo mancante)
@@ -46,6 +48,23 @@ calcola_extra() {
   [ -z "$note" ] || extra+=$'\nNote del developer:\n'"$note"$'\n'
 }
 calcola_extra
+
+# Il developer chiede al team leader: la patch resta sul ramo (wip:), la domanda sul sotto-task,
+# poi risponde il team leader. Oltre MAX_DOMANDE è un tentativo fallito come gli altri
+if [ "$stato" = domanda ]; then
+  domanda=$(tronca 4000 < "$ESITO_DIR/domanda.md")
+  if [ "$(conta_commenti "$SOTTOTASK" "$T_DOMANDA_DEV")" -lt "$MAX_DOMANDE" ]; then
+    if [ -s "$ESITO_DIR/patch.diff" ]; then
+      git commit -q -m "wip: #$SOTTOTASK domanda"
+      pf_push "$ramo"
+    fi
+    { echo "$T_DOMANDA_DEV"; echo; echo "Tentativo: $TENTATIVO"; echo; echo "$domanda"; echo; echo "_${cons}_"; } | pf_issue_commenta "$SOTTOTASK" -
+    [ "$diretto" = 1 ] || pf_commenta_testo "$ISSUE" "Il developer chiede al team leader sul sotto-task #$SOTTOTASK."
+    passo team-leader "$ISSUE" "$SOTTOTASK" "$TENTATIVO"
+    exit 0
+  fi
+  stato=fallito; messaggio=$domanda; motivo="domanda oltre il limite di $MAX_DOMANDE"
+fi
 
 if [ "$stato" != ok ]; then
   { printf 'Tentativo %s di %s fallito: %s (%s)\n' "$TENTATIVO" "$MAX_TENTATIVI" "$motivo" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } | pf_issue_commenta "$SOTTOTASK" -
