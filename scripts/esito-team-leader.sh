@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Esito del team leader (token in scrittura, niente Claude). Due casi:
 # - specifica (SOTTOTASK vuoto): pubblica "## Specifica" con la corsia; corsia diretta → developer
-#   sull'issue; corsia completa → crea le sub-issue e avvia la prima; domanda → `domanda`.
+#   sull'issue; corsia completa → crea le sub-issue e avvia la prima; domanda → `turn-human`.
 # - escalation (SOTTOTASK pieno): il sotto-task è fallito MAX_TENTATIVI volte, o subito se ha
 #   toccato test bloccati dal revisore; il team leader decide
 #   riformula | bloccato (docs/specifica.md, Escalation).
-# Un esito.json mancante o non valido si ritenta una volta, poi `bloccato`.
+# Un esito.json mancante o non valido si ritenta una volta, poi la palla al proprietario (`turn-human`).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 f="$ESITO_DIR/esito.json"
@@ -15,9 +15,8 @@ etichette=$(pf_issue_etichette "$ISSUE"); tipo=$(tipo_issue "$etichette")
 ramo=$(ramo_di "$ISSUE" "$tipo"); base=$(base_di "$tipo")
 
 bloccato() {
-  printf 'Catena, team leader: %s%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
-  [ -z "${SOTTOTASK:-}" ] || pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
-  pf_etichetta_togli "$ISSUE" "$E_IN_CORSO"; pf_etichetta_aggiungi "$ISSUE" "$E_BLOCCATO"
+  printf 'Catena, team leader: %s\n\nPer ripartire rispondi con un commento o rimetti `auto`.%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
+  fermo "$ISSUE" "${SOTTOTASK:-}"
   exit 0
 }
 # Un risultato assente o malformato: un secondo tentativo, poi basta
@@ -25,7 +24,7 @@ non_valido() {
   local marca="Team leader: risultato non valido"
   if [ "$(conta_commenti "$ISSUE" "$marca")" -lt 1 ]; then
     pf_commenta_testo "$ISSUE" "$marca ($1), riprovo una volta. $cons"
-    pf_passo_avvia team-leader "$ISSUE" "${SOTTOTASK:-}" 1 "$CONTESTO_NOTA_FILE"
+    passo team-leader "$ISSUE" "${SOTTOTASK:-}" 1 "$CONTESTO_NOTA_FILE"
     exit 0
   fi
   bloccato "risultato non valido anche al secondo tentativo ($1)."
@@ -60,7 +59,7 @@ if [ -z "${SOTTOTASK:-}" ]; then
   domanda=$(jq -r '.domanda // ""' "$f")
   if [ -n "$domanda" ]; then
     printf '%s\n\n%s\n\nRispondi con un commento: la catena riparte da sola.\n' "$T_DOMANDA" "$domanda" | pf_issue_commenta "$ISSUE" -
-    pf_etichetta_togli "$ISSUE" "$E_IN_CORSO"; pf_etichetta_aggiungi "$ISSUE" "$E_DOMANDA"
+    fermo "$ISSUE"
     exit 0
   fi
 
@@ -69,13 +68,13 @@ if [ -z "${SOTTOTASK:-}" ]; then
 
   if [ "$corsia" = diretta ]; then
     pf_commenta_testo "$ISSUE" "Corsia diretta: parte il developer, codice e test insieme, poi la pull request."
-    pf_passo_avvia developer "$ISSUE" "$ISSUE" 1
+    passo developer "$ISSUE" "$ISSUE" 1
     exit 0
   fi
   # Su file e non in pipe con head: con pipefail il secondo echo darebbe "Broken pipe"
   crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$TMP_BASE/sottotask.txt")
   pf_commenta_testo "$ISSUE" "Specifica pronta. Parte il primo sotto-task (#$prima)."
-  pf_passo_avvia developer "$ISSUE" "$prima" 1
+  passo developer "$ISSUE" "$prima" 1
   exit 0
 fi
 
@@ -103,9 +102,9 @@ if [ -n "$prima_di" ]; then
 fi
 
 # riformula: il sotto-task si chiude, al suo posto quelli nuovi. In corsia diretta il
-# "sotto-task" è l'issue principale: resta aperta e `in-corso`, i nuovi sono sue sub-issue
+# "sotto-task" è l'issue principale: resta aperta, i nuovi sono sue sub-issue
 if [ "$SOTTOTASK" != "$ISSUE" ]; then
-  pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
+  turno "$SOTTOTASK" ""
   pf_issue_chiudi "$SOTTOTASK" "Riformulato dal team leader in sotto-task più piccoli."
 fi
 crea_sottotask "$f" '.sottotask' > "$TMP_BASE/sottotask.txt"; prima=$(head -1 "$TMP_BASE/sottotask.txt")
@@ -115,4 +114,4 @@ if [ "$(corsia_di "$specifica")" = diretta ]; then
   { echo "$T_SPECIFICA"; echo; echo "Corsia: completa"; echo; sed -E '1,/^Corsia:/d' <<<"$specifica"; } | pf_issue_commenta "$ISSUE" -
 fi
 pf_commenta_testo "$ISSUE" "Escalation sul sotto-task #$SOTTOTASK: riformulato. Riparte dal sotto-task #$prima."
-pf_passo_avvia developer "$ISSUE" "$prima" 1
+passo developer "$ISSUE" "$prima" 1

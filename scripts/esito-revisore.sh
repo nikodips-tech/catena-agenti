@@ -4,7 +4,7 @@
 # giri), oppure, finiti i giri, "con riserve": la catena va avanti fino alla pull request,
 # che si unisce comunque da sola in develop con le riserve scritte (le guarda chi passa in
 # master). I test ripristinati si bloccano per i sotto-task che seguono.
-# Un esito.json mancante o non valido si ritenta una volta, poi `bloccato`.
+# Un esito.json mancante o non valido si ritenta una volta, poi la palla al proprietario (`turn-human`).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 f="$ESITO_DIR/esito.json"
@@ -13,15 +13,15 @@ etichette=$(pf_issue_etichette "$ISSUE"); tipo=$(tipo_issue "$etichette")
 ramo=$(ramo_di "$ISSUE" "$tipo"); base=$(base_di "$tipo")
 
 bloccato() {
-  printf 'Catena, revisione: %s%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
-  pf_etichetta_togli "$ISSUE" "$E_IN_CORSO"; pf_etichetta_aggiungi "$ISSUE" "$E_BLOCCATO"
+  printf 'Catena, revisione: %s\n\nPer ripartire rispondi con un commento o rimetti `auto`.%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
+  fermo "$ISSUE"
   exit 0
 }
 non_valido() {
   local marca="Revisore: risultato non valido"
   if [ "$(conta_commenti "$ISSUE" "$marca")" -lt 1 ]; then
     pf_commenta_testo "$ISSUE" "$marca ($1), riprovo una volta. $cons"
-    pf_passo_avvia revisore "$ISSUE"
+    passo revisore "$ISSUE"
     exit 0
   fi
   bloccato "risultato non valido anche al secondo tentativo ($1)."
@@ -47,7 +47,7 @@ proposte=$(jq -r '(.proposte // []) | map(select(type == "string" and length > 0
 
 if [ "$(jq -r '.approvato' "$f")" = true ]; then
   printf '%s\n\n%s\n\n_%s_\n' "$T_REV_OK" "$nota" "$cons" | pf_issue_commenta "$ISSUE" -
-  pf_passo_avvia editor "$ISSUE"
+  passo editor "$ISSUE"
   exit 0
 fi
 
@@ -57,7 +57,7 @@ if [ "$giri" -ge "$MAX_GIRI_REVISIONE" ]; then
   # Non si blocca: la pull request si apre e si unisce, con le riserve scritte
   printf '%s\n\nDopo %s giri la revisione non approva. %s\n\n%s\n\n_%s_\n' \
     "$T_REV_RISERVE" "$giri" "$SEGUITO_RISERVE" "$nota" "$cons" | pf_issue_commenta "$ISSUE" -
-  pf_passo_avvia editor "$ISSUE"
+  passo editor "$ISSUE"
   exit 0
 fi
 
@@ -106,11 +106,11 @@ if [ "$n" -eq 0 ]; then
   # Solo rimozioni: la revisione riparte (vale come giro)
   if [ "$rimossi" -eq 0 ]; then
     printf '%s\n\nI file indicati non si possono rimuovere (non aggiunti sul ramo o già nella base): proseguo con riserve. %s\n\n%s%s\n' "$T_REV_RISERVE" "$SEGUITO_RISERVE" "$nota" "$rapporto" | pf_issue_commenta "$ISSUE" -
-    pf_passo_avvia editor "$ISSUE"
+    passo editor "$ISSUE"
     exit 0
   fi
   printf '%s\n\n%s%s\n\n_%s_\n' "$T_REV_RIMOSSI" "$nota" "$rapporto" "$cons" | pf_issue_commenta "$ISSUE" -
-  pf_passo_avvia revisore "$ISSUE"
+  passo revisore "$ISSUE"
   exit 0
 fi
 
@@ -125,4 +125,4 @@ for i in $(seq 0 $((n - 1))); do
 done
 prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 printf '%s\n\n%s%s\n\nRiparte dal sotto-task #%s.\n\n_%s_\n' "$T_REV_SOTTOTASK" "$nota" "$rapporto" "$prima" "$cons" | pf_issue_commenta "$ISSUE" -
-pf_passo_avvia developer "$ISSUE" "$prima" 1
+passo developer "$ISSUE" "$prima" 1

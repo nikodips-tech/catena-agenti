@@ -1,5 +1,5 @@
 # Il guardiano, riutilizzabile (workflow_call), niente Claude: a orario, riprende le issue
-# `in-corso` ferme e fa partire la coda.
+# in corso (con un `turn-*`) ferme e fa partire la coda.
 name: Catena guardiano
 
 on:

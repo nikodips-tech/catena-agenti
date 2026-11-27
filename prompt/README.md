@@ -1,6 +1,6 @@
 # I prompt da incollare in Claude Code
 
-Due prompt per i progetti, uno per il repository della catena. Ognuno in una **nuova
+Tre prompt per i progetti, uno per il repository della catena. Ognuno in una **nuova
 sessione** di Claude Code. Sostituisci `<CARTELLA>` con il percorso di una copia locale della
 catena (clone o cartella estratta), che serve solo per leggere i documenti: i progetti usano
 la catena da GitHub.
@@ -25,6 +25,14 @@ tutto il vecchio e si installa da zero. Sessione aperta **nella cartella del rep
 
 ```
 Leggi <CARTELLA>/prompt/2-repo-esistente.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
+```
+
+## 3. Un progetto che passa da v1 a v2
+
+Un repository che usa già la catena con `@v1`. Sessione aperta **nella cartella del repository**:
+
+```
+Leggi <CARTELLA>/prompt/3-passa-a-v2.md ed eseguilo in questo repository. La cartella della catena è <CARTELLA>.
 ```
 
 ## 0. Pubblicare la catena (una volta sola)

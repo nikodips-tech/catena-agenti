@@ -1,8 +1,7 @@
 # Un agente della catena, qualunque sia il ruolo (team-leader, developer, revisore, editor).
 # Riutilizzabile (workflow_call): lo chiama il wrapper catena.yml di ogni progetto.
 #
-# Tre job:
-#   inizio  segna `in-corso` sul sotto-task (chi esegue Claude non scrive sulle issue)
+# Due job:
 #   agente  token in SOLA LETTURA: prepara i dati, esegue Claude Code (la CLI) e raccoglie
 #           il risultato in un artifact; Claude non ha git, gh né il token
 #   esito   token in scrittura, niente Claude: commit, push, commenti, etichette, passo dopo
@@ -62,20 +61,7 @@ env:
   PROPRIETARIO: ${{ github.repository_owner }}
 
 jobs:
-  inizio:
-    runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
-    timeout-minutes: 5
-    permissions:
-      issues: write
-    steps:
-      - name: Sotto-task in corso
-        if: inputs.sottotask != '' && inputs.sottotask != inputs.issue && inputs.ruolo == 'developer'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh issue edit "$SOTTOTASK" --add-label in-corso
-
   agente:
-    needs: inizio
     runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     # Il tetto di tempo del ruolo sta sul passo di Claude (sotto); il job ha 15 minuti in più
     # per dipendenze, raccolta e controlli, così la raccolta scrive sempre il suo esito

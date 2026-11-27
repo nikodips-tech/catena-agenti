@@ -33,9 +33,12 @@ T_RIPARAZIONE="## Riparazione"
 T_PR_PRONTA="## Pull request pronta"
 
 # Etichette
-E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto
-E_IN_CORSO=in-corso; E_DOMANDA=domanda; E_BLOCCATO=bloccato; E_UNIONE=unione-automatica
+E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto; E_UNIONE=unione-automatica
 E_IN_DEVELOP=in-develop
+# Etichette di turno: sull'issue (e sul sotto-task su cui si lavora) una sola alla volta, di chi è la palla
+E_TURN_TL=turn-team-leader; E_TURN_DEV=turn-developer; E_TURN_REV=turn-reviewer
+E_TURN_ED=turn-editor; E_TURN_CI=turn-ci; E_TURN_HUMAN=turn-human
+E_RETRO=retrospective; E_RETRO_OK=retrospective-approved
 
 # Tetti
 MAX_TENTATIVI=2        # tentativi del developer per sottotask
@@ -129,7 +132,7 @@ aspetta_produzione() { [ "$CHIUDI_ISSUE" = produzione ] && [ "$1" = "$RAMO_SVILU
 riferimento_issue() { if aspetta_produzione "$2"; then echo "Refs #$1"; else echo "Closes #$1"; fi; }
 
 # issue_unita <issue> <base> <testo>: l'issue dopo l'unione: chiusa, oppure aperta con
-# `in-develop` fino al rilascio; via `in-corso` e `domanda`
+# `in-develop` fino al rilascio; senza turno
 issue_unita() {
   if aspetta_produzione "$2"; then
     pf_commenta_testo "$1" "$3 Resta aperta finché non va in produzione: se qualcosa non va, scrivilo qui."
@@ -138,7 +141,7 @@ issue_unita() {
     [ "$(pf_issue_stato "$1")" != OPEN ] || pf_issue_chiudi "$1"
     pf_commenta_testo "$1" "$3"
   fi
-  pf_etichetta_togli "$1" "$E_IN_CORSO,$E_DOMANDA"
+  turno "$1" ""
 }
 
 # corsia_di <specifica>: diretta | completa (la riga "Corsia: diretta" nella specifica)
@@ -190,6 +193,62 @@ esegui() {
   else
     (cd "$REPO_DIR/$cartella" && NO_COLOR=1 FORCE_COLOR=0 CI=1 sh -c "$1")
   fi
+}
+
+# ---------------------------------------------------------------- turni
+# Sull'issue una sola etichetta `turn-*` alla volta: di chi è la palla. `turn-human` = aspetta il
+# proprietario (domanda, blocco, preflight): un suo commento o `auto` la fa ripartire. Lo stato
+# vero resta nei commenti e nel ramo (avvio.sh riparte da lì); l'etichetta dice di chi è il turno.
+
+# turno <issue> <etichetta o vuoto>: toglie i `turn-*` diversi da quella e la aggiunge se manca
+turno() {
+  local issue=$1 nuova=${2:-} presenti togli="" e
+  presenti=$(pf_issue_etichette "$issue")
+  for e in $presenti; do
+    if [[ "$e" == turn-* && "$e" != "$nuova" ]]; then togli+="${togli:+,}$e"; fi
+  done
+  if [ -n "$togli" ]; then pf_etichetta_togli "$issue" "$togli"; fi
+  if [ -n "$nuova" ] && ! ha "$presenti" "$nuova"; then pf_etichetta_aggiungi "$issue" "$nuova"; fi
+  return 0
+}
+
+# in_corso <etichette>: vero se c'è un `turn-*` diverso da turn-human
+in_corso() {
+  local e
+  for e in $1; do
+    if [[ "$e" == turn-* && "$e" != "$E_TURN_HUMAN" ]]; then return 0; fi
+  done
+  return 1
+}
+
+# issue_in_corso: JSON [{numero, etichette[], aggiornata}] delle issue principali (non sotto-task) in corso
+issue_in_corso() {
+  pf_issue_aperte | jq --arg s "$E_SOTTOTASK" --arg h "$E_TURN_HUMAN" \
+    '[.[] | select((.etichette | index($s) | not) and any(.etichette[]; startswith("turn-") and . != $h))]'
+}
+
+# passo <passo> <issue> [sottotask] [tentativo] [file nota]: mette il turno e avvia il passo
+passo() {
+  local t=""
+  case "$1" in
+    team-leader) t=$E_TURN_TL ;;
+    developer) t=$E_TURN_DEV ;;
+    revisore) t=$E_TURN_REV ;;
+    editor) t=$E_TURN_ED ;;
+    chiusura) t=$E_TURN_CI ;;
+  esac
+  if [ -n "$t" ]; then
+    turno "$2" "$t"
+    if [ -n "${3:-}" ] && [ "$3" != "$2" ] && { [ "$1" = developer ] || [ "$1" = team-leader ]; }; then turno "$3" "$t"; fi
+  fi
+  pf_passo_avvia "$@"
+}
+
+# fermo <issue> [sottotask]: aspetta il proprietario: l'issue a turn-human, il sotto-task senza turno
+fermo() {
+  turno "$1" "$E_TURN_HUMAN"
+  if [ -n "${2:-}" ] && [ "$2" != "$1" ]; then turno "$2" ""; fi
+  return 0
 }
 
 # ---------------------------------------------------------------- git

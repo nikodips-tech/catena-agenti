@@ -20,5 +20,5 @@ concurrency:
 
 jobs:
   release:
-    uses: nikodips-tech/catena-agenti/.github/workflows/release.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/release.yml@v2
     secrets: inherit

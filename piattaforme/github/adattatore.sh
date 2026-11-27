@@ -40,6 +40,11 @@ pf_issue_aperte_con() {
   gh issue list --state open --label "$1" --limit 100 --json number,labels,updatedAt \
     --jq '[.[] | {numero: .number, etichette: [.labels[].name], aggiornata: .updatedAt}]'
 }
+# pf_issue_aperte: tutte le issue aperte, stesso JSON di pf_issue_aperte_con
+pf_issue_aperte() {
+  gh issue list --state open --limit 200 --json number,labels,updatedAt \
+    --jq '[.[] | {numero: .number, etichette: [.labels[].name], aggiornata: .updatedAt}]'
+}
 
 # ---------------------------------------------------------------- passi della catena
 # pf_passo_avvia <passo> <issue> [sottotask] [tentativo] [file nota]: il wrapper catena.yml del progetto

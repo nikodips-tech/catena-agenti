@@ -21,8 +21,8 @@ Un quadro breve, che finirà nel resoconto:
   struttura (come nel prompt 1).
 - Su GitHub: ruleset e controlli obbligatori, etichette, environment, variabili e segreti
   (solo i nomi), PR aperte (release compresa), issue con etichette del vecchio metodo
-  (`in-corso`, `auto`, `domanda`, `bloccato`, priorità…), rami remoti.
-- **Fermati e riferisci** se una issue è in lavorazione dal vecchio metodo (`in-corso`, o una
+  (`in-corso`, `auto`, `domanda`, `bloccato`, `turn-*`, priorità…), rami remoti.
+- **Fermati e riferisci** se una issue è in lavorazione dal vecchio metodo (`in-corso` o un `turn-*` diverso da `turn-human`, o una
   PR `issue-*` aperta): va finita o chiusa prima, a mano.
 - Fermati anche se `git status` non è pulito o mancano `develop` e `master`.
 

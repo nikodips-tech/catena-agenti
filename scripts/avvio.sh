@@ -2,7 +2,7 @@
 # Avvio della catena, senza Claude: controlla chi e cosa, mette in coda, fa il preflight e
 # riparte dal punto giusto (docs/flusso.md). Lo chiama il wrapper del progetto per:
 #   EVENTO=etichetta   `auto` messa su una issue (CHI = chi l'ha messa)
-#   EVENTO=commento    un commento del proprietario su una issue con `domanda`
+#   EVENTO=commento    un commento del proprietario su una issue con `turn-human`
 #   EVENTO=dispatch    la coda, il guardiano o un avvio a mano
 # Variabili: ISSUE, EVENTO, CHI, PROPRIETARIO, più quelle di preflight.sh.
 set -euo pipefail
@@ -17,9 +17,9 @@ tipo=$(tipo_issue "$etichette")
 case "$EVENTO" in
   etichetta) [ "$CHI" = "$PROPRIETARIO" ] || rifiuta "\`auto\` vale solo se la mette il proprietario del repository." ;;
   commento)
-    # Una risposta a una domanda: solo del proprietario, solo con `domanda`
+    # Una risposta quando la palla è sua: solo del proprietario, solo con `turn-human`
     [ "$CHI" = "$PROPRIETARIO" ] || exit 0
-    ha "$etichette" "$E_DOMANDA" || exit 0 ;;
+    ha "$etichette" "$E_TURN_HUMAN" || exit 0 ;;
   dispatch) ;;
   *) errore "evento sconosciuto: $EVENTO"; exit 2 ;;
 esac
@@ -31,8 +31,8 @@ esac
 ! ha "$etichette" "$E_IN_DEVELOP" || rifiuta "L'issue è già in develop e si chiude con il rilascio. Per una correzione apri una issue nuova."
 
 # Già in corso: un secondo avvio (coda e pr-chiusa insieme, `auto` rimessa per sbaglio) non fa
-# niente. Il guardiano toglie `in-corso` prima di chiamare l'avvio, così la ripresa passa.
-if ha "$etichette" "$E_IN_CORSO"; then
+# niente. Il guardiano toglie il turno prima di chiamare l'avvio, così la ripresa passa.
+if in_corso "$etichette"; then
   pf_etichetta_togli "$ISSUE" "$E_AUTO"
   [ "$EVENTO" != etichetta ] || pf_commenta_testo "$ISSUE" "La catena è già al lavoro su questa issue."
   exit 0
@@ -49,29 +49,28 @@ if [ -n "$pr" ]; then
 fi
 
 # Una sola catena alla volta: i sotto-task non contano. L'issue resta con `auto`, la coda la troverà
-altra=$(pf_issue_aperte_con "$E_IN_CORSO" | jq -r --argjson io "$ISSUE" --arg s "$E_SOTTOTASK" \
-  '[.[] | select(.numero != $io and (.etichette | index($s) | not))] | sort_by(.numero) | first | .numero // empty')
+altra=$(issue_in_corso | jq -r --argjson io "$ISSUE" '[.[] | select(.numero != $io)] | sort_by(.numero) | first | .numero // empty')
 if [ -n "$altra" ]; then
   ultimo=$(pf_issue_commenti "$ISSUE" | jq -r 'last | .corpo // ""')
   [[ "$ultimo" == "In coda"* ]] || pf_commenta_testo "$ISSUE" "In coda: parte quando finisce la #$altra."
   exit 0
 fi
 
-# Preflight: se manca qualcosa di infrastruttura, l'elenco preciso e `bloccato`
+# Preflight: se manca qualcosa di infrastruttura, l'elenco preciso e la palla al proprietario
 if ! problemi=$(bash "$CATENA/scripts/preflight.sh"); then
-  pf_etichetta_togli "$ISSUE" "$E_AUTO,$E_IN_CORSO"
-  pf_etichetta_aggiungi "$ISSUE" "$E_BLOCCATO"
-  printf 'Catena, controllo iniziale: manca qualcosa che richiede le tue mani.\n\n%s\n\nSistemato, rimetti `%s`.%s' "$problemi" "$E_AUTO" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
+  pf_etichetta_togli "$ISSUE" "$E_AUTO"
+  fermo "$ISSUE"
+  printf 'Catena, controllo iniziale: manca qualcosa che richiede le tue mani.\n\n%s\n\nSistemato, rispondi con un commento o rimetti `%s`.%s' "$problemi" "$E_AUTO" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
   exit 0
 fi
 
-pf_etichetta_togli "$ISSUE" "$E_AUTO,$E_DOMANDA,$E_BLOCCATO"
-pf_etichetta_aggiungi "$ISSUE" "$E_IN_CORSO"
+# Si parte: il turno giusto lo mette `passo`
+pf_etichetta_togli "$ISSUE" "$E_AUTO,$E_TURN_HUMAN"
 
 # Ripartenza dal punto giusto, leggendo lo stato dai commenti e dal ramo
 specifica=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA")
 if [ -z "$specifica" ]; then
-  pf_passo_avvia team-leader "$ISSUE"
+  passo team-leader "$ISSUE"
   exit 0
 fi
 
@@ -83,7 +82,7 @@ prima=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ "$(corsia_di "$specifica")" = diretta ]; then
   # Corsia diretta: il developer lavora sull'issue stessa
   if ! commit_sul_ramo "$ramo" "$pref: #$ISSUE" "$base"; then
-    pf_passo_avvia developer "$ISSUE" "$ISSUE" 1
+    passo developer "$ISSUE" "$ISSUE" 1
     exit 0
   fi
   # Lavoro finito: di norma la chiusura. Si prosegue come nella corsia completa se ci sono
@@ -92,22 +91,22 @@ if [ "$(corsia_di "$specifica")" = diretta ]; then
     if grep -qP -- "$RE_TEST" <<< "$f"; then echo "$f"; fi
   done)
   if [ -z "$prima" ] && { [ -z "$tocca_test" ] || [ "$(conta_commenti "$ISSUE" "$T_REV_OK" "$T_REV_RISERVE")" -gt 0 ]; }; then
-    pf_passo_avvia chiusura "$ISSUE"
+    passo chiusura "$ISSUE"
     exit 0
   fi
 fi
 
 if [ -n "$prima" ]; then
-  pf_passo_avvia developer "$ISSUE" "$prima" 1
+  passo developer "$ISSUE" "$prima" 1
 elif pf_ramo_esiste "$ramo"; then
   # Sotto-task finiti: revisione, oppure chiusura se la revisione c'è già stata
   if [ "$(conta_commenti "$ISSUE" "$T_REV_OK" "$T_REV_RISERVE")" -gt 0 ]; then
-    pf_passo_avvia chiusura "$ISSUE"
+    passo chiusura "$ISSUE"
   else
-    pf_passo_avvia revisore "$ISSUE"
+    passo revisore "$ISSUE"
   fi
 else
   # Specifica senza sotto-task aperti e senza ramo: si rifà la specifica
   pf_commenta_testo "$ISSUE" "Specifica presente ma nessun sotto-task aperto e nessun ramo: rifaccio la specifica."
-  pf_passo_avvia team-leader "$ISSUE"
+  passo team-leader "$ISSUE"
 fi

@@ -8,7 +8,7 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 1. **Il lavoro entra come issue e esce come pull request unita.** La catena fa tutto il resto
    da sola: specifica, test e codice, revisione, documentazione, PR, unione.
 2. **Niente fermate evitabili.** Ogni fallimento ha un passo dopo che non richiede una persona
-   (sezione 6). `bloccato` resta solo per l'infrastruttura rotta o per i tetti esauriti dopo
+   (sezione 6). La palla va al proprietario (`turn-human`) solo per l'infrastruttura rotta o per i tetti esauriti dopo
    l'escalation.
 3. **Claude non tocca la piattaforma.** Gira con un token in sola lettura, senza git né gh:
    scrive solo file nel checkout. Commit, push, commenti, etichette e il passo dopo li fa uno
@@ -53,10 +53,22 @@ Legge il `CLAUDE.md` del progetto come in una sessione normale.
 | `hotfix` | persona | correzione urgente, base `master`, ramo `hotfix/issue-<n>` |
 | `sotto-task` | catena | sub-issue creata dal team leader o dal revisore |
 | `auto` | **solo il proprietario** | avvia la catena; resta finché l'issue è in coda |
-| `in-corso` | catena | sull'issue principale per tutto il giro, sul sotto-task mentre si lavora |
-| `domanda` | catena | serve una risposta del proprietario: un suo commento fa ripartire |
-| `bloccato` | catena | infrastruttura rotta o tetti esauriti: serve una mano |
+| `turn-team-leader` | catena | il turno è del team leader (specifica, escalation) |
+| `turn-developer` | catena | il turno è del developer |
+| `turn-reviewer` | catena | il turno è del revisore |
+| `turn-editor` | catena | il turno è dell'editor |
+| `turn-ci` | catena | il turno è di pull request e CI |
+| `turn-human` | catena | aspetta il proprietario (domanda, blocco, preflight fallito): un suo commento o `auto` fa ripartire |
+| `retrospective` | catena | la retrospettiva ha consigli per il progetto da guardare |
+| `retrospective-approved` | **solo il proprietario** | approva i consigli: parte l'applicazione |
 | `unione-automatica` | catena / sessione locale | sulla **pull request**: a CI verde si unisce da sola |
+
+Sull'issue principale (e sul sotto-task su cui si lavora) c'è **una sola** etichetta `turn-*`
+alla volta: di chi è la palla. Un'issue è «in corso» se ha un `turn-*` diverso da `turn-human`;
+senza `turn-*` non è in corso (in coda con `auto`, o finita). Lo stato vero resta nei commenti
+e nel ramo (l'avvio riparte da lì): l'etichetta dice di chi è il turno. Le mette `passo` in
+`scripts/comune.sh` insieme all'avvio del passo; `fermo` mette `turn-human`. Il job `inizio` non
+esiste più: il turno del sotto-task lo mette già `passo`.
 
 ## 4. Stati
 
@@ -80,7 +92,7 @@ corpo le note del developer e i test della base che ha toccato.
 
 ## 5. Il giro (docs/flusso.md per il dettaglio)
 
-1. **Avvio** su `auto` del proprietario, su una risposta a una `domanda`, dalla coda o dal
+1. **Avvio** su `auto` del proprietario, su un commento del proprietario su un'issue `turn-human`, dalla coda o dal
    guardiano. Rifiuta: non del proprietario, sotto-task, né task né hotfix, PR già aperta.
    Coda: un'issue principale alla volta. **Preflight**: segreto di Claude, token della App,
    environment `agenti`, `.catena.yml`, workflow della CI; le etichette mancanti le crea.
@@ -112,12 +124,12 @@ corpo le note del developer e i test della base che ha toccato.
    proprietario.
 7. **Unione**: a CI verde squash con il prefisso del release (`feat:`/`fix:`), ramo
    cancellato, issue chiusa (o `in-develop` fino al rilascio, con `chiudi_issue: produzione`),
-   staging; a CI rossa una riparazione, poi `bloccato`. Poi la coda.
+   staging; a CI rossa una riparazione, poi `turn-human`. Poi la coda.
 8. **PR chiusa a mano**: ordine sull'issue, ramo cancellato, coda.
-9. **Guardiano** (ogni ora): issue `in-corso` ferme da più di 90 minuti senza esecuzioni
+9. **Guardiano** (ogni ora): issue in corso (un `turn-*` diverso da `turn-human`) ferme da più di 90 minuti senza esecuzioni
    attive → ripartenza; niente in corso → coda.
 
-## 6. Scala di escalation (al posto di `bloccato`)
+## 6. Scala di escalation (prima di `turn-human`)
 
 | Fallimento | Passo dopo |
 |---|---|
@@ -125,13 +137,13 @@ corpo le note del developer e i test della base che ha toccato.
 | Developer tocca test della base bloccati dal revisore | ripristinati; i controlli decidono; se rossi, **escalation subito** |
 | `aggiorna` fallisce dopo il developer (pacchetto inesistente, rete) | tentativo fallito con il log, come un controllo rosso |
 | Developer rosso (tentativo 1) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
-| Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
-| Escalation già fatta | `bloccato`, lavoro parziale sul ramo |
-| Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `bloccato` |
+| Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` (azione: la palla al proprietario) |
+| Escalation già fatta | `turn-human`, lavoro parziale sul ramo |
+| Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `turn-human` |
 | Revisore oltre 2 giri | riserve: la PR si unisce da sola, le riserve restano nella PR; interviene il proprietario solo al merge in master |
 | Editor fuori da docs | scartato, si prosegue |
-| CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `bloccato` |
-| Preflight fallito | `bloccato` con l'elenco esatto |
+| CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `turn-human` |
+| Preflight fallito | `turn-human` con l'elenco esatto |
 | Workflow morto (timeout, GitHub) | il guardiano riparte dal punto giusto |
 | Domanda del team leader | la risposta del proprietario riavvia |
 
@@ -153,7 +165,7 @@ revisore ha fatto ripristinare (`test_bloccati`). Le modifiche agli altri file p
 normale. La raccolta gira nel job di Claude, che può scriverne i file di appoggio: per questo il
 job `esito` (con il token, senza Claude) ricalcola i test bloccati dall'issue e ricontrolla la
 patch. Una patch del developer che tocca file protetti, e2e o test bloccati
-porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
+porta a `turn-human`; quella dell'editor fuori da `docs` si scarta.
 
 ## 9. Tetti
 
@@ -173,8 +185,8 @@ Per costruzione, la catena aspetta una persona solo in tre casi:
 
 | Fermata | Chi la toglie | Come |
 |---|---|---|
-| `domanda` del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
-| `bloccato` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema e rimette `auto` |
+| `turn-human` per una domanda del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
+| `turn-human` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema, poi un commento o `auto` |
 | pull request verso `master` (release, hotfix) | il proprietario | il merge è l'OK al rilascio |
 
 Tutto il resto riparte da solo: tentativi, escalation, riparazione della CI, coda, guardiano.

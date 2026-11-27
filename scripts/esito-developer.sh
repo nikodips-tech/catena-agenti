@@ -7,7 +7,7 @@
 #   allora la revisione).
 # - Controlli rossi: il lavoro parziale resta sul ramo come "wip: #<n> tentativo k", così il
 #   tentativo dopo corregge invece di rifare. Al fallimento di MAX_TENTATIVI escalation al
-#   team leader (una volta), poi `bloccato`. Subito, se la raccolta ha ripristinato test
+#   team leader (una volta), poi `turn-human`. Subito, se la raccolta ha ripristinato test
 #   bloccati dal revisore.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
@@ -21,9 +21,8 @@ ramo=$(ramo_di "$ISSUE" "$tipo"); base=$(base_di "$tipo"); pref=$(prefisso_di "$
 diretto=0; [ "$SOTTOTASK" != "$ISSUE" ] || diretto=1
 
 bloccato() {
-  printf 'Catena, sotto-task #%s: %s%s' "$SOTTOTASK" "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
-  [ "$diretto" = 1 ] || pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
-  pf_etichetta_togli "$ISSUE" "$E_IN_CORSO"; pf_etichetta_aggiungi "$ISSUE" "$E_BLOCCATO"
+  printf 'Catena, sotto-task #%s: %s\n\nPer ripartire rispondi con un commento o rimetti `auto`.%s' "$SOTTOTASK" "$1" "$(riga_esecuzione)" | pf_issue_commenta "$ISSUE" -
+  fermo "$ISSUE" "$SOTTOTASK"
   exit 0
 }
 
@@ -60,19 +59,19 @@ if [ "$stato" != ok ]; then
   # quindi si salta subito al team leader, che decide se tenerli bloccati o sbloccarli
   ripristinati=$(paste -sd, "$ESITO_DIR/test-ripristinati.txt" 2> /dev/null || true)
   if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ] && [ -z "$ripristinati" ]; then
-    pf_passo_avvia developer "$ISSUE" "$SOTTOTASK" "$((TENTATIVO + 1))" "$TMP_BASE/nota.txt"
+    passo developer "$ISSUE" "$SOTTOTASK" "$((TENTATIVO + 1))" "$TMP_BASE/nota.txt"
     exit 0
   fi
   if [ -n "$ripristinati" ]; then perche="ha toccato test bloccati dal revisore ($ripristinati)"
   else perche="è fallito $MAX_TENTATIVI volte"; fi
   # Riparazione di una CI rossa: niente escalation (riformulare a PR aperta riscriverebbe il
-  # ramo), una sola riparazione e poi `bloccato` (docs/specifica.md, Scala di escalation)
+  # ramo), una sola riparazione e poi `turn-human` (docs/specifica.md, Scala di escalation)
   if [ "$diretto" = 1 ] && [ "$(conta_commenti "$ISSUE" "$T_RIPARAZIONE")" -gt 0 ]; then
     bloccato "la riparazione della CI rossa $perche. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
   fi
   if [ "$(conta_commenti "$SOTTOTASK" "$T_ESCALATION")" -lt "$MAX_ESCALATION" ]; then
     pf_commenta_testo "$ISSUE" "Il sotto-task #$SOTTOTASK $perche: chiedo al team leader (escalation)."
-    pf_passo_avvia team-leader "$ISSUE" "$SOTTOTASK" 1 "$TMP_BASE/nota.txt"
+    passo team-leader "$ISSUE" "$SOTTOTASK" 1 "$TMP_BASE/nota.txt"
     exit 0
   fi
   bloccato "$perche anche dopo l'escalation. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
@@ -96,18 +95,18 @@ if [ "$diretto" = 1 ]; then
   { printf 'Developer: fatto in %s tentativo/i (%s). ' "$TENTATIVO" "$cons"
     if [ -n "$toccati_base" ]; then echo "Ha toccato test della base: parte la revisione."; else echo "Parte la chiusura."; fi
     [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } | pf_issue_commenta "$ISSUE" -
-  if [ -n "$toccati_base" ]; then pf_passo_avvia revisore "$ISSUE"; else pf_passo_avvia chiusura "$ISSUE"; fi
+  if [ -n "$toccati_base" ]; then passo revisore "$ISSUE"; else passo chiusura "$ISSUE"; fi
   exit 0
 fi
 
-pf_etichetta_togli "$SOTTOTASK" "$E_IN_CORSO"
+turno "$SOTTOTASK" ""
 { printf 'Fatto sul ramo `%s` in %s tentativo/i (%s).\n' "$ramo" "$TENTATIVO" "$cons"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; [ -z "$extra" ] || { echo; echo "$extra"; }; } > "$TMP_BASE/chiusura.md"
 pf_issue_chiudi "$SOTTOTASK" "$(cat "$TMP_BASE/chiusura.md")"
 
 prossimo=$(pf_sottoissue_aperte "$ISSUE" | sed -n 1p)
 if [ -n "$prossimo" ]; then
-  pf_passo_avvia developer "$ISSUE" "$prossimo" 1
+  passo developer "$ISSUE" "$prossimo" 1
 else
   pf_commenta_testo "$ISSUE" "Sotto-task finiti sul ramo \`$ramo\`: parte la revisione."
-  pf_passo_avvia revisore "$ISSUE"
+  passo revisore "$ISSUE"
 fi

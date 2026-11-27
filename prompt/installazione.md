@@ -3,7 +3,7 @@
 Passi comuni ai prompt 1 e 2, da eseguire dopo la loro ricognizione (e, per il 2, dopo la
 pulizia). Valgono `regole-sessione.md` e i documenti della catena: `docs/specifica.md`,
 `docs/configurazione.md`, `docs/permessi.md`, `docs/ci.md`, `docs/rilascio.md`. Qui si
-collega il progetto alla catena pubblicata (`nikodips-tech/catena-agenti`, tag `v1`): non si
+collega il progetto alla catena pubblicata (`nikodips-tech/catena-agenti`, tag `v2`): non si
 copia niente della catena, si scrivono solo i file del progetto.
 
 Il risultato atteso: una issue con `auto` arriva da sola fino alla pull request unita in
@@ -30,7 +30,7 @@ sistema i ruleset (passo G), unisci.
 
 | File | Da | Adattamenti |
 |---|---|---|
-| `.catena.yml` | `modello-repo/.catena.yml`, esempi in `docs/esempi/catena-*.yml` | **tutti i comandi** come li lancia il progetto, stesso container; `cartella`; `file_test`, `file_e2e` secondo dove stanno davvero; `framework_test`; `docs`; `dockerfile`/`immagini` e `migrazioni` (vuoti se non esistono); `test_db` solo se il progetto ha test con database che vuole in CI; `chiudi_issue: produzione`; staging solo se il progetto ha un workflow di staging (passo H) |
+| `.catena.yml` | `modello-repo/.catena.yml`, esempi in `docs/esempi/catena-*.yml` | **tutti i comandi** come li lancia il progetto, stesso container (`aggiorna` per le dipendenze); `retrospettiva` (`si` predefinito); `cartella`; `file_test`, `file_e2e` secondo dove stanno davvero; `framework_test`; `docs`; `dockerfile`/`immagini` e `migrazioni` (vuoti se non esistono); `test_db` solo se il progetto ha test con database che vuole in CI; `chiudi_issue: produzione`; staging solo se il progetto ha un workflow di staging (passo H) |
 | `CLAUDE.md` | `modello-repo/CLAUDE.md` | compilato con il progetto: due righe su cos'è e lo stack, i comandi **uguali** a `.catena.yml`, i rami. In italiano, massimo 45 righe. Tieni la sezione «Due corsie». Non descrivere agenti o orchestratori |
 | `.claude/agents/product-owner.md` | `agenti/product-owner.md` della catena | la sezione «Fonti»: se il repo ha già visione, roadmap, glossario o simili, indica quelli al posto di `docs/prodotto/*` |
 | `.claude/skills/catena/SKILL.md`, `.claude/agents/catena-*.md` | `modello-repo/.claude/` | nessuno (la catena in sessione locale, `docs/locale.md`) |
@@ -69,8 +69,9 @@ del code owner.
 Le crea il preflight della catena al primo avvio. Anticipale:
 `GH_REPO=<owner>/<repo> CATENA=<CARTELLA> bash <CARTELLA>/scripts/preflight.sh etichette`
 (serve Git Bash). Se non è possibile, `gh label create` dalla tabella in
-`scripts/preflight.sh`. Nove etichette: `task`, `hotfix`, `sotto-task`, `auto`, `in-corso`,
-`domanda`, `bloccato`, `unione-automatica`, `in-develop`.
+`scripts/preflight.sh`. Quattordici etichette: `task`, `hotfix`, `sotto-task`, `auto`, `turn-team-leader`,
+`turn-developer`, `turn-reviewer`, `turn-editor`, `turn-ci`, `turn-human`, `retrospective`,
+`retrospective-approved`, `unione-automatica`, `in-develop`.
 
 ## G. Protezione dei rami
 
@@ -95,7 +96,7 @@ il workflow una volta a mano. Rosso: non ripararlo, riporta l'errore. Senza stag
 3. `gh workflow list`: `Catena`, `CI`, `Release`, `Tag master`, `In develop` attivi; nessun
    altro workflow di Claude o del vecchio metodo. Uno disattivato: `gh workflow enable`.
 4. Nessun file rimasto cita file, etichette o workflow che non esistono più (`grep`).
-5. Le nove etichette esistono. Nessun ramo remoto oltre a develop, master ed eventuale release.
+5. Le quattordici etichette esistono. Nessun ramo remoto oltre a develop, master ed eventuale release.
 6. Non hai messo `auto` e non hai lanciato nessun workflow della catena.
 
 La prova vera la fa l'utente: una issue piccola e reale con `task`, poi `auto`. Cosa guardare:

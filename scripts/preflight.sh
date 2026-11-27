@@ -17,9 +17,14 @@ task	0E8A16	Lavoro normale, va verso develop
 hotfix	B60205	Correzione urgente, parte da master
 sotto-task	C5DEF5	Sub-issue creata dalla catena
 auto	5319E7	Avvia la catena: la mette solo il proprietario
-in-corso	FBCA04	Gli agenti ci stanno lavorando
-domanda	D93F0B	Serve una risposta del proprietario
-bloccato	000000	Errore di infrastruttura o tetto superato: serve una mano
+turn-team-leader	FBCA04	Turno: il team leader (specifica, escalation)
+turn-developer	FBCA04	Turno: il developer (test e codice)
+turn-reviewer	FBCA04	Turno: il revisore
+turn-editor	FBCA04	Turno: l'editor (documentazione)
+turn-ci	FBCA04	Turno: pull request e CI
+turn-human	D93F0B	Turno del proprietario: risponde con un commento o rimette auto
+retrospective	BFD4F2	Retrospettiva con consigli da guardare
+retrospective-approved	0E8A16	Consigli approvati: la catena li applica
 unione-automatica	1D76DB	A controlli verdi la pull request si unisce da sola
 FINE
   [ "$CHIUDI_ISSUE" != produzione ] || printf '%s\t0075CA\tIn develop: si chiude quando va in produzione\n' "$E_IN_DEVELOP"

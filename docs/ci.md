@@ -59,7 +59,7 @@ migrazione e si decide se generalizzarli (`prompt/regole-sessione.md`).
 
 ## Passaggio di un progetto alla CI condivisa
 
-1. La catena con la CI condivisa è in `v1`.
+1. La catena con la CI condivisa è in `v2`.
 2. PR nel progetto: `.catena.yml` con `dockerfile`/`immagini` e `migrazioni`; `ci.yml`
    sostituito dal wrapper, più i job propri. Gli script in `.github/scripts/` si tolgono
    solo se nessun altro workflow li usa (la release usa `migrazioni-distruttive.sh` finché

@@ -6,7 +6,7 @@ piano).
 
 ```
 proprietario ──auto──► AVVIO (A) ──► TEAM LEADER (C opus, poi A)
-                                        │ domanda ──► `domanda` ──risposta──► AVVIO
+                                        │ domanda ──► `turn-human` ──commento──► AVVIO
                                         │ corsia diretta ──────────────────────┐
                                         ▼ corsia completa                      │
                    ┌──► DEVELOPER (C sonnet, poi A): test, poi codice ◄── tentativo+1 (wip:)
@@ -14,7 +14,7 @@ proprietario ──auto──► AVVIO (A) ──► TEAM LEADER (C opus, poi A)
                    │ prossimo sotto-task ◄──┤                                 ▼
                    │                        │ finiti        ESCALATION: TEAM LEADER (C opus)
                    │                        ▼                 riformula ──► sotto-task nuovi
-                   │                 REVISORE (C opus, poi A)  bloccato ───► `bloccato`
+                   │                 REVISORE (C opus, poi A)  bloccato ───► `turn-human`
                    └── sotto-task / rimuovi / ripristina (≤2) ◄──┤
                                                     │ approvata / riserve (PR unita lo stesso)
                                                     ▼
@@ -26,16 +26,16 @@ proprietario ──auto──► AVVIO (A) ──► TEAM LEADER (C opus, poi A)
                                                     rosso: RIPARAZIONE ─► DEVELOPER (1 volta) ─► CHIUSURA
                                                     ▼
                                                   CODA ──► AVVIO della prossima con `auto`
-GUARDIANO (ogni ora, A): issue in-corso ferme ─► AVVIO (ripartenza)
+GUARDIANO (ogni ora, A): issue in corso (turn-*) ferme ─► AVVIO (ripartenza)
 PR CHIUSA A MANO (A): ordine sull'issue, ramo via, CODA
 ```
 
 ## I passi
 
 ### Avvio (`avvio.sh`, nessun Claude)
-Eventi: `auto` del proprietario; commento del proprietario su `domanda`; dispatch (coda,
+Eventi: `auto` del proprietario; commento del proprietario su `turn-human`; dispatch (coda,
 guardiano, a mano). Rifiuti con commento: non del proprietario, sotto-task, né task né hotfix,
-già in corso. PR già aperta per l'issue: non riparte. Coda: un'issue principale `in-corso`
+già in corso. PR già aperta per l'issue: non riparte. Coda: un'issue principale in corso
 alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ripartenza:
 
 | Stato trovato | Passo |
@@ -49,17 +49,16 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
 | nessun sotto-task aperto, ramo esistente, senza revisione | revisore |
 | nessun sotto-task aperto, nessun ramo | team leader (si rifà la specifica) |
 
-### Un agente (`agente.yml`, tre job)
-1. `inizio` (A scrittura): `in-corso` sul sotto-task.
-2. `agente` (A **sola lettura**): checkout della catena (al suo tag) e del progetto; `ramo.sh`
+### Un agente (`agente.yml`, due job)
+1. `agente` (A **sola lettura**): checkout della catena (al suo tag) e del progetto; `ramo.sh`
    sceglie il ramo e registra il commit di partenza; `contesto.sh` prepara i dati in file
    fuori dal repo; credenziali git tolte dal checkout; dipendenze installate (il loro output
    non entra nel contesto di Claude); `agente.sh` lancia la CLI senza nessun token di
    piattaforma nell'ambiente; `raccolta.sh` misura le modifiche rispetto al commit di
    partenza, ripristina i file protetti, gli e2e e i test bloccati dal revisore, scarta quelli fuori ambito,
    formatta, riallinea le dipendenze con `aggiorna` se manifest o lock sono cambiati, esegue i controlli (developer), scrive l'artifact `esito`.
-3. `esito` (A scrittura): `esito-<ruolo>.sh` applica la patch, committa, pusha, commenta,
-   etichetta e avvia il passo dopo con `pf_passo_avvia` (un `workflow_dispatch` del wrapper
+2. `esito` (A scrittura): `esito-<ruolo>.sh` applica la patch, committa, pusha, commenta,
+   etichetta e avvia il passo dopo con `passo` (un `workflow_dispatch` del wrapper
    del progetto). Un'esecuzione annullata non arriva qui.
 
 ### Developer
@@ -92,11 +91,11 @@ Solo PR con `unione-automatica` e CI dell'ultimo commit. Verde: squash con titol
 `<prefisso>: <titolo> (#issue)`, ramo cancellato, issue chiusa (con `chiudi_issue:
 produzione` resta aperta con `in-develop` fino al rilascio), commento, staging secondo
 `.catena.yml`. Rosso: `## Riparazione 1` e developer sull'issue con job falliti e log; la
-seconda volta `bloccato`. Se la riparazione tocca test della base, prima della chiusura parte
+seconda volta `turn-human`. Se la riparazione tocca test della base, prima della chiusura parte
 il revisore. Poi la coda.
 
 ### Guardiano (`guardiano.sh`)
-Se nessuna esecuzione della catena è attiva: la prima issue `in-corso` senza novità da più di
+Se nessuna esecuzione della catena è attiva: la prima issue in corso (un `turn-*` diverso da `turn-human`) senza novità da più di
 `guardiano_minuti` riparte (commento "Ripresa automatica"); se nessuna è in corso, la coda.
 
 ## Quanto costa un giro

@@ -29,4 +29,4 @@ else
   testo="Editor: niente da aggiornare ($cons)."
 fi
 { echo "$testo"; [ -z "$avvisi" ] || { echo; echo "$avvisi"; }; } | pf_issue_commenta "$ISSUE" -
-pf_passo_avvia chiusura "$ISSUE"
+passo chiusura "$ISSUE"

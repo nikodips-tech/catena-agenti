@@ -71,4 +71,4 @@ jobs:
         if: failure()
         run: |
           gh issue comment "$ISSUE" --body "Catena, chiusura: non sono riuscito ad aprire la pull request. Esecuzione: $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID"
-          gh issue edit "$ISSUE" --remove-label in-corso --add-label bloccato
+          gh issue edit "$ISSUE" --remove-label turn-ci --add-label turn-human
