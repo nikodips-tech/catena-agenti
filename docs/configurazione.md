@@ -62,6 +62,7 @@ runner. Devono essere **gli stessi della CI**.
 | `modello_team_leader`, `modello_developer`, `modello_revisore`, `modello_editor` | vedi specifica | modello per ruolo |
 | `turni_<ruolo>` | vedi specifica | turni massimi per ruolo |
 | `guardiano_minuti` | `90` | fermo oltre il quale il guardiano riparte |
+| `retrospettiva` | `si` | `si` (predefinito) o `no`: dopo un giro con problemi la catena propone consigli per il progetto e per la catena (`## Retrospettiva`); quelli per il progetto si applicano solo se il proprietario mette `retrospective-approved` |
 
 ## CI (docs/ci.md)
 

@@ -35,6 +35,8 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 | Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` e `rimuovi.sh` (cancella file normali, mai protetti o e2e) | test e codice del sottotask, in TDD |
 | Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi / ripristina, più `proposte` di regole di progetto per il proprietario |
 | Editor | haiku | 15 | 15 min | Read, Glob, Grep, Write, Edit | documentazione |
+| Retrospettiva | opus | 30 | 20 min | Read, Glob, Grep, Write | `esito.json`: riassunto, consigli per il progetto (con il file) e per la catena, di un giro con problemi |
+| Applica | sonnet | 40 | 25 min | Read, Glob, Grep, Write, Edit | i consigli approvati dal proprietario, solo in `CLAUDE.md`, `.claude/`, `.catena.yml`, `docs/`, `README.md` |
 | Product owner | opus | — | — | lettura + gh issue | issue pronte; **fuori dai workflow** |
 
 Modello e turni si possono cambiare per progetto in `.catena.yml` (`modello_<ruolo>`,
@@ -86,6 +88,7 @@ Lo stato di un'issue è nei suoi commenti, riconosciuti dal titolo con cui comin
 | `## Risposta del team leader` | sotto-task | la risposta: il developer riparte dallo stesso tentativo. Una domanda è aperta se l'ultimo tra questi due commenti è la domanda |
 | `## Riparazione n` | issue | la CI della PR era rossa, il developer la ripara (al massimo una) |
 | `## Pull request pronta` | issue | la PR è aperta |
+| `## Retrospettiva` | issue | i consigli del giro (o «Niente da proporre»); l'ultimo vale |
 
 Il ramo porta il resto: `wip: #<sottotask> tentativo k` (tentativo fallito del developer),
 `feat: #<n>` o `fix: #<n>` (sottotask finito, assorbe i wip), `chore: #<issue> rimozione file
@@ -131,6 +134,17 @@ corpo le note del developer e i test della base che ha toccato.
 8. **PR chiusa a mano**: ordine sull'issue, ramo cancellato, coda.
 9. **Guardiano** (ogni ora): issue in corso (un `turn-*` diverso da `turn-human`) ferme da più di 90 minuti senza esecuzioni
    attive → ripartenza; niente in corso → coda.
+10. **Retrospettiva** (chiave `retrospettiva` di `.catena.yml`, `si` predefinito): dopo l'unione
+    (o la chiusura a mano), se il giro ha avuto problemi (commenti `## Domanda`, revisioni con
+    sottotask, file rimossi o riserve, riparazioni, risultati non validi; sui sotto-task
+    escalation, domande del developer o tentativi falliti), parte il ruolo retrospettiva sulla
+    base: pubblica `## Retrospettiva` con consigli per il progetto e per la catena (questi li
+    riporta a mano il proprietario). Con consigli per il progetto l'issue ha `retrospective`;
+    se il proprietario mette `retrospective-approved` (solo lui) parte `applica` su
+    `retrospettiva/issue-<n>` dalla base di sviluppo, che può toccare solo `CLAUDE.md`,
+    `.claude/`, `.catena.yml`, `docs/`, `README.md` (mai `.github/` né `.env`); poi la chiusura
+    apre la PR `chore: retrospettiva di #n`, senza etichette né `unione-automatica`: la unisce
+    il proprietario. Se non fa niente, non succede niente.
 
 ## 6. Scala di escalation (prima di `turn-human`)
 
@@ -161,7 +175,8 @@ diretta` e il motivo. La CI e l'unione sono le stesse della catena. Niente issue
 
 ## 8. File protetti
 
-Nessun agente può cambiare: `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
+Nessun agente può cambiare, salvo `applica` dopo l'approvazione del proprietario (sezione 5, passo 10;
+mai `.github/`): `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
 `.catena.yml`, file `.env` (non `.example`), più `file_protetti` di `.catena.yml`. I test e2e
 non si scrivono né si modificano. I test che esistono già nella base il developer può
 modificarli e cancellarli (note di spiegazione, giudizio del revisore), tranne quelli che il

@@ -38,12 +38,13 @@ fotografa() {
 }
 stato() { echo "$1" > "$ESITO_DIR/stato"; }
 
-# File protetti: mai un blocco, si rimettono com'erano e si avvisa
-avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"
+# File protetti: mai un blocco, si rimettono com'erano e si avvisa (non per `applica`: i consigli approvati
+# toccano CLAUDE.md, .claude/, .catena.yml, e lo scarto lo fa il suo caso più sotto)
+if [ "$ruolo" != applica ]; then avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"; fi
 fotografa
 
 case "$ruolo" in
-  team-leader|revisore)
+  team-leader|revisore|retrospettiva)
     # Non devono toccare file: se lo fanno, le modifiche si ignorano
     avviso_file "File modificati e ignorati (il ruolo non modifica il repo)" "$(cat "$ESITO_DIR/file.txt")"
     if [ -f "$ESITO_DIR/esito.json" ]; then stato ok; else stato mancante; echo "esito.json non trovato (uscita di Claude: $uscita)" > "$ESITO_DIR/messaggio.md"; fi ;;
@@ -105,6 +106,13 @@ case "$ruolo" in
   editor)
     fuori=$(grep -vE "$RE_DOCS" "$ESITO_DIR/file.txt" || true)
     if [ -n "$fuori" ]; then mapfile -t f <<< "$fuori"; ripristina "${f[@]}"; avviso_file "File fuori da docs/ e README scartati" "$fuori"; fi
+    fotografa
+    if [ -s "$ESITO_DIR/file.txt" ]; then stato ok; else stato vuoto; fi ;;
+
+  applica)
+    # Solo i file dei consigli (RE_APPLICA); mai .github/ né .env: il resto si scarta con un avviso
+    fuori=$({ grep -vP "$RE_APPLICA" "$ESITO_DIR/file.txt"; grep -P '^\.github/|(^|/)\.env' "$ESITO_DIR/file.txt"; } | sort -u || true)
+    if [ -n "$fuori" ]; then mapfile -t f <<< "$fuori"; ripristina "${f[@]}"; avviso_file "File fuori dall'ambito della retrospettiva scartati" "$fuori"; fi
     fotografa
     if [ -s "$ESITO_DIR/file.txt" ]; then stato ok; else stato vuoto; fi ;;
 

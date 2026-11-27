@@ -7,7 +7,7 @@
 | **Claude** (job agente) | leggere il checkout, scrivere file nel checkout, eseguire `controlli.sh`; il developer anche `rimuovi.sh` (cancella file normali del repo, mai protetti o e2e) | leggere issue, usare git/gh/rete, vedere token o segreti |
 | **Script di esito** | leggere e scrivere issue, etichette, commenti; push sui rami `issue-*`; avviare il passo dopo | push su `develop`/`master`; unire PR |
 | **Identità "App"** | aprire PR, push che fanno partire la CI, unire PR in `develop` | leggere o scrivere issue (non serve e così non lo fa nessuno per sbaglio) |
-| **Proprietario** | mettere `auto`, rispondere alle domande, unire in `master`, cambiare `.github/`, `CLAUDE.md`, `.claude/` | — |
+| **Proprietario** | mettere `auto` e `retrospective-approved`, rispondere alle domande, unire in `master`, cambiare `.github/`, `CLAUDE.md`, `.claude/` | — |
 
 Le dipendenze le cambia il developer, che non ha la rete: `aggiorna` (`controlli.sh aggiorna`)
 gira nel container dei controlli, con la rete, e scarica i pacchetti e riallinea il lock; la
@@ -15,6 +15,12 @@ raccolta lo rilancia se manifest o lock sono cambiati. Esegue anche gli script d
 dei pacchetti nuovi, prima della revisione, nel container che vede solo la cartella del progetto
 e nessuna variabile del job. Claude stesso non ha rete. Dove il progetto lo permette,
 `aggiorna` con `--ignore-scripts`. Il revisore giudica le dipendenze dal `manifest.diff`.
+
+La retrospettiva (`applica`) è l'unica eccezione ai file protetti: dopo che il proprietario ha
+messo `retrospective-approved` può modificare `CLAUDE.md`, `.claude/`, `.catena.yml`, `docs/` e
+`README.md`, mai `.github/` né i file `.env`. Lo scarto di ciò che è fuori ambito lo fanno la
+raccolta e, ricontrollando, lo script di esito. La sua pull request non si unisce da sola: la
+unisce il proprietario dopo averla letta.
 
 Perché due identità: su GitHub (e su quasi tutte le piattaforme) gli eventi causati dal token
 automatico di un job **non fanno partire altri workflow**, per evitare cicli. La PR aperta e

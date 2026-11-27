@@ -4,12 +4,31 @@
 #   EVENTO=etichetta   `auto` messa su una issue (CHI = chi l'ha messa)
 #   EVENTO=commento    un commento del proprietario su una issue con `turn-human`
 #   EVENTO=dispatch    la coda, il guardiano o un avvio a mano
-# Variabili: ISSUE, EVENTO, CHI, PROPRIETARIO, più quelle di preflight.sh.
+#   EVENTO=etichetta con ETICHETTA=retrospective-approved: i consigli della retrospettiva (applica)
+# Variabili: ISSUE, EVENTO, CHI, ETICHETTA, PROPRIETARIO, più quelle di preflight.sh.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
 cd "$REPO_DIR"
 
 rifiuta() { pf_etichetta_togli "$ISSUE" "$E_AUTO"; pf_commenta_testo "$ISSUE" "$1"; exit 0; }
+
+# Consigli della retrospettiva approvati: solo il proprietario, serve una retrospettiva; si
+# applica anche a issue chiusa, quindi prima di ogni altro controllo
+if [ "$EVENTO" = etichetta ] && [ "${ETICHETTA:-}" = "$E_RETRO_OK" ]; then
+  if [ "$CHI" != "$PROPRIETARIO" ]; then
+    pf_etichetta_togli "$ISSUE" "$E_RETRO_OK"
+    pf_commenta_testo "$ISSUE" "\`$E_RETRO_OK\` vale solo se la mette il proprietario del repository."
+    exit 0
+  fi
+  if [ -z "$(commento_con_titolo "$ISSUE" "$T_RETRO")" ]; then
+    pf_etichetta_togli "$ISSUE" "$E_RETRO_OK"
+    pf_commenta_testo "$ISSUE" "Non c'è nessuna retrospettiva da applicare su questa issue."
+    exit 0
+  fi
+  pf_etichetta_togli "$ISSUE" "$E_RETRO,$E_RETRO_OK"
+  passo applica "$ISSUE"
+  exit 0
+fi
 
 etichette=$(pf_issue_etichette "$ISSUE")
 tipo=$(tipo_issue "$etichette")

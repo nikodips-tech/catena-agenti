@@ -38,6 +38,7 @@ docs: ^docs/|^README\.md$
 framework_test: Vitest
 
 guardiano_minuti: 90
+retrospettiva: si                    # si | no: consigli dopo i giri con problemi (docs/configurazione.md)
 
 staging_variabile:                   # es. STAGING_AUTOMATICO; vuoto se il progetto non ha staging
 staging_valore: si

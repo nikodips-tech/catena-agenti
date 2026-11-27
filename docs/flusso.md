@@ -106,6 +106,16 @@ il revisore. Poi la coda.
 Se nessuna esecuzione della catena è attiva: la prima issue in corso (un `turn-*` diverso da `turn-human`) senza novità da più di
 `guardiano_minuti` riparte (commento "Ripresa automatica"); se nessuna è in corso, la coda.
 
+### Retrospettiva (`retrospettiva`, `applica`)
+Dopo l'unione, se il giro ha avuto problemi (`giro_con_problemi` in `comune.sh`) e la chiave
+`retrospettiva` non è `no`, parte il ruolo retrospettiva (opus, sulla base): legge la storia
+dell'issue e dei sotto-task e `esito-retrospettiva.sh` pubblica `## Retrospettiva` con i consigli
+per il progetto e per la catena; con consigli per il progetto mette `retrospective`. Il
+proprietario mette `retrospective-approved` (l'`avvio` lo accetta solo da lui, anche su issue
+chiusa): parte `applica` (sonnet) su `retrospettiva/issue-<n>`, `esito-applica.sh` committa solo
+i file ammessi (`RE_APPLICA`) e la chiusura apre la PR `chore: retrospettiva di #n`, senza
+`unione-automatica`. Gli errori della retrospettiva non fermano niente: un solo commento.
+
 ## Quanto costa un giro
 
 Ordine di grandezza per un'issue media in corsia completa con tre sotto-task: un team leader

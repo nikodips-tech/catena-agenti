@@ -4,6 +4,7 @@
 #
 # Eventi:
 #   issues labeled `auto`         → avvio (solo se la mette il proprietario)
+#   issues labeled `retrospective-approved` → avvio: applica i consigli della retrospettiva (solo il proprietario)
 #   issue_comment del proprietario su un'issue `turn-human` → avvio (la risposta fa ripartire)
 #   workflow_dispatch             → un passo della catena (lo usano gli script, o un avvio a mano)
 #   workflow_run della CI         → unione delle pull request con `unione-automatica`
@@ -24,7 +25,7 @@ on:
       passo:
         description: Passo della catena
         type: choice
-        options: [avvio, team-leader, developer, revisore, editor, chiusura]
+        options: [avvio, team-leader, developer, revisore, editor, chiusura, retrospettiva, applica, chiusura-retrospettiva]
         required: true
       issue:
         description: Numero dell'issue principale
@@ -55,7 +56,7 @@ permissions: {}
 jobs:
   avvio:
     if: >-
-      (github.event_name == 'issues' && github.event.label.name == 'auto') ||
+      (github.event_name == 'issues' && contains(fromJSON('["auto","retrospective-approved"]'), github.event.label.name)) ||
       (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
        contains(github.event.issue.labels.*.name, 'turn-human') &&
        github.event.comment.user.login == github.repository_owner) ||
@@ -73,10 +74,11 @@ jobs:
       issue: ${{ github.event.issue.number || inputs.issue }}
       evento: ${{ github.event_name == 'issues' && 'etichetta' || github.event_name == 'issue_comment' && 'commento' || 'dispatch' }}
       chi: ${{ github.event.sender.login }}
+      etichetta: ${{ github.event.label.name }}
     secrets: inherit
 
   agente:
-    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["team-leader","developer","revisore","editor"]'), inputs.passo)
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["team-leader","developer","revisore","editor","retrospettiva","applica"]'), inputs.passo)
     permissions:
       contents: write
       issues: write
@@ -93,7 +95,7 @@ jobs:
     secrets: inherit
 
   chiusura:
-    if: github.event_name == 'workflow_dispatch' && inputs.passo == 'chiusura'
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["chiusura","chiusura-retrospettiva"]'), inputs.passo)
     permissions:
       contents: read
       issues: write
@@ -101,6 +103,7 @@ jobs:
     uses: nikodips-tech/catena-agenti/.github/workflows/chiusura.yml@v2
     with:
       issue: ${{ inputs.issue }}
+      retrospettiva: ${{ inputs.passo == 'chiusura-retrospettiva' }}
     secrets: inherit
 
   unione:

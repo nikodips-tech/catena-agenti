@@ -4,9 +4,30 @@
 # ripartire. Etichette: il tipo (task/hotfix) e, quando la catena può unire da sola,
 # `unione-automatica`: ogni task, anche con le riserve del revisore (che restano scritte nel
 # corpo della PR e nel commento). Non si unisce da sola solo un hotfix: l'unione in master
-# è del proprietario.
+# è del proprietario. Con RETROSPETTIVA=true: la PR dei consigli approvati, che non si unisce da sola.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
+
+# Consigli della retrospettiva: PR dal ramo retrospettiva/issue-n alla base di sviluppo, senza
+# etichette e senza `unione-automatica`: la unisce il proprietario dopo averla letta
+if [ "${RETROSPETTIVA:-false}" = true ]; then
+  ramo=$(ramo_retro "$ISSUE"); base=$RAMO_SVILUPPO
+  pr=$(pf_pr_aperta "$ramo" "$base" | jq -r '.numero // empty')
+  if [ -z "$pr" ]; then
+    { printf 'Consigli della retrospettiva di #%s, approvati dal proprietario:\n\n' "$ISSUE"
+      commento_con_titolo "$ISSUE" "$T_RETRO" | tronca 4000
+      printf '\nNon si unisce da sola: la unisci tu dopo averla letta.\n\nAperta dalla catena di agenti.\n'; } > "$TMP_BASE/corpo.md"
+    pr=$(pf_pr_apri "$ramo" "$base" "chore: retrospettiva di #$ISSUE" "$TMP_BASE/corpo.md")
+  else
+    # I push del token di Actions non fanno partire la CI: un commit vuoto dell'App sì
+    ramo_checkout "$ramo" "$base"
+    GIT_NOME="${APP_NOME:-catena-agenti}[bot]" GIT_EMAIL="${APP_NOME:-catena-agenti}[bot]@users.noreply.github.com" git_identita
+    git commit -q --allow-empty -m "ci: rilancia i controlli"
+    pf_push "$ramo"
+  fi
+  pf_commenta_testo "$ISSUE" "$T_PR_PRONTA"$'\n\n'"Retrospettiva: #$pr verso \`$base\`. Non si unisce da sola: la unisci tu dopo averla letta."
+  exit 0
+fi
 etichette=$(pf_issue_etichette "$ISSUE"); tipo=$(tipo_issue "$etichette")
 ramo=$(ramo_di "$ISSUE" "$tipo"); base=$(base_di "$tipo")
 specifica=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA"); corsia=$(corsia_di "$specifica")

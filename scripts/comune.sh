@@ -33,6 +33,7 @@ T_REV_RISERVE="## Revisione: con riserve"
 T_ESCALATION="## Escalation"
 T_RIPARAZIONE="## Riparazione"
 T_PR_PRONTA="## Pull request pronta"
+T_RETRO="## Retrospettiva"
 
 # Etichette
 E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto; E_UNIONE=unione-automatica
@@ -67,6 +68,8 @@ RE_E2E=$(cfg file_e2e '(^|/)(e2e|e2e-screenshots)/|playwright\.config|\.e2e\.')
 RE_PROTETTI='^(\.github/|\.gitlab-ci|\.gitlab/|\.claude/)|(^|/)CLAUDE\.md$|(^|/)\.catena\.yml$|(^|/)\.env($|\.(?!example$))'
 [ -z "$(cfg file_protetti)" ] || RE_PROTETTI="$RE_PROTETTI|$(cfg file_protetti)"
 RE_DOCS=$(cfg docs '^docs/|^README\.md$')
+# File che la retrospettiva approvata può modificare (applica); mai .github/ né .env
+RE_APPLICA='(^|/)CLAUDE\.md$|^\.claude/|^\.catena\.yml$|^docs/|^README\.md$'
 WORKFLOW_CATENA=$(cfg workflow_catena catena.yml)
 # unione: l'issue si chiude quando la PR entra nella base; produzione: entrata in develop
 # resta aperta con `in-develop` e la chiude il rilascio (tag-master del progetto)
@@ -148,7 +151,7 @@ aspetta_produzione() { [ "$CHIUDI_ISSUE" = produzione ] && [ "$1" = "$RAMO_SVILU
 riferimento_issue() { if aspetta_produzione "$2"; then echo "Refs #$1"; else echo "Closes #$1"; fi; }
 
 # issue_unita <issue> <base> <testo>: l'issue dopo l'unione: chiusa, oppure aperta con
-# `in-develop` fino al rilascio; senza turno
+# `in-develop` fino al rilascio; senza turno; poi, se il giro ha avuto problemi, la retrospettiva
 issue_unita() {
   if aspetta_produzione "$2"; then
     pf_commenta_testo "$1" "$3 Resta aperta finché non va in produzione: se qualcosa non va, scrivilo qui."
@@ -158,6 +161,30 @@ issue_unita() {
     pf_commenta_testo "$1" "$3"
   fi
   turno "$1" ""
+  retrospettiva_avvia "$1" || log "retrospettiva non avviata"
+}
+
+# ramo_retro <issue>: il ramo della PR che applica i consigli della retrospettiva
+ramo_retro() { echo "retrospettiva/issue-$1"; }
+
+# giro_con_problemi <issue>: vero se il giro ha avuto domande, giri di revisione, riparazioni,
+# risultati non validi, escalation, domande del developer o tentativi falliti
+giro_con_problemi() {
+  local n
+  if [ "$(conta_commenti "$1" "$T_DOMANDA" "$T_REV_SOTTOTASK" "$T_REV_RIMOSSI" "$T_REV_RISERVE" "$T_RIPARAZIONE" \
+    "Team leader: risultato non valido" "Revisore: risultato non valido")" -gt 0 ]; then return 0; fi
+  # Sotto-task anche chiusi
+  for n in $(pf_sottoissue "$1" | jq -r '.[].numero'); do
+    if [ "$(conta_commenti "$n" "$T_ESCALATION" "$T_DOMANDA_DEV" "Tentativo ")" -gt 0 ]; then return 0; fi
+  done
+  return 1
+}
+
+# retrospettiva_avvia <issue>: se la chiave `retrospettiva` non è `no` e il giro ha avuto problemi
+retrospettiva_avvia() {
+  [ "$(cfg retrospettiva si)" != no ] || return 0
+  if giro_con_problemi "$1"; then passo retrospettiva "$1"; fi
+  return 0
 }
 
 # corsia_di <specifica>: diretta | completa (la riga "Corsia: diretta" nella specifica)

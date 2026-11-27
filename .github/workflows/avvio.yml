@@ -12,6 +12,10 @@ on:
         description: etichetta | commento | dispatch
         type: string
         required: true
+      etichetta:
+        description: Nome dell'etichetta messa (auto | retrospective-approved)
+        type: string
+        default: ""
       chi:
         description: Chi ha messo l'etichetta o scritto il commento
         type: string
@@ -66,6 +70,7 @@ jobs:
       ISSUE: ${{ inputs.issue }}
       EVENTO: ${{ inputs.evento }}
       CHI: ${{ inputs.chi }}
+      ETICHETTA: ${{ inputs.etichetta }}
       PROPRIETARIO: ${{ github.repository_owner }}
       CLAUDE_TOKEN_PRESENTE: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
       APP_OK: ${{ needs.app.outputs.ok }}

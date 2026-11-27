@@ -1,4 +1,5 @@
-# Un agente della catena, qualunque sia il ruolo (team-leader, developer, revisore, editor).
+# Un agente della catena, qualunque sia il ruolo (team-leader, developer, revisore, editor,
+# retrospettiva, applica).
 # Riutilizzabile (workflow_call): lo chiama il wrapper catena.yml di ogni progetto.
 #
 # Due job:
@@ -12,7 +13,7 @@ on:
   workflow_call:
     inputs:
       ruolo:
-        description: team-leader | developer | revisore | editor
+        description: team-leader | developer | revisore | editor | retrospettiva | applica
         type: string
         required: true
       issue:
@@ -65,7 +66,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CATENA_RUNNER || '"ubuntu-24.04"') }}
     # Il tetto di tempo del ruolo sta sul passo di Claude (sotto); il job ha 15 minuti in più
     # per dipendenze, raccolta e controlli, così la raccolta scrive sempre il suo esito
-    timeout-minutes: ${{ fromJSON('{"team-leader":35,"developer":70,"revisore":40,"editor":30}')[inputs.ruolo] }}
+    timeout-minutes: ${{ fromJSON('{"team-leader":35,"developer":70,"revisore":40,"editor":30,"retrospettiva":35,"applica":40}')[inputs.ruolo] }}
     permissions:
       contents: read
       issues: read
@@ -129,7 +130,7 @@ jobs:
       # Nessun GH_TOKEN in questo passo: Claude vede solo il checkout.
       # Stessi tetti di scripts/ruoli.sh e docs/specifica.md
       - name: Agente
-        timeout-minutes: ${{ fromJSON('{"team-leader":20,"developer":55,"revisore":25,"editor":15}')[inputs.ruolo] }}
+        timeout-minutes: ${{ fromJSON('{"team-leader":20,"developer":55,"revisore":25,"editor":15,"retrospettiva":20,"applica":25}')[inputs.ruolo] }}
         continue-on-error: true
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

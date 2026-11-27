@@ -116,6 +116,30 @@ case "$ruolo" in
     descrivi manifest.diff "i manifest delle dipendenze cambiati sul ramo (vuoto se nessuno): giudica le dipendenze aggiunte e tolte"
     pf_issue_commenti "$ISSUE" | jq -r '[.[] | select(.corpo | startswith("## Revisione")) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/revisioni-precedenti.md"
     descrivi revisioni-precedenti.md "le tue revisioni precedenti su questa issue (vuoto al primo giro): non ripetere richieste già fatte" ;;
+  retrospettiva)
+    issue_md
+    specifica_tl=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA")
+    if [ -n "$specifica_tl" ]; then printf '%s\n' "$specifica_tl" > "$CONTESTO/specifica.md"; descrivi specifica.md "la specifica dell'issue principale #$ISSUE"; fi
+    # Tutti i commenti dell'issue e di ogni sotto-task, anche chiusi, con titolo e autore
+    {
+      echo "# Issue #$ISSUE: $(pf_issue_titolo "$ISSUE")"; echo
+      pf_issue_commenti "$ISSUE" | jq -r '.[] | "### \(.autore)\n\n\(.corpo)\n"'
+      pf_sottoissue "$ISSUE" | jq -r '.[] | [.numero, .titolo] | @tsv' | while IFS=$'\t' read -r n t; do
+        echo; echo "# Sotto-task #$n: $t"; echo
+        pf_issue_commenti "$n" | jq -r '.[] | "### \(.autore)\n\n\(.corpo)\n"'
+      done
+    } | tronca 150000 > "$CONTESTO/storia.md"
+    descrivi storia.md "tutti i commenti dell'issue e dei suoi sotto-task, in ordine, con autore: è la storia del giro"
+    git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
+    git log --stat --format='%h %s' -F --grep="(#$ISSUE)" "origin/$BASE" | limita 30000 > "$CONTESTO/modifiche.txt"
+    descrivi modifiche.txt "i commit unificati nella base per questa issue, con i file toccati" ;;
+  applica)
+    commento_con_titolo "$ISSUE" "$T_RETRO" > "$CONTESTO/retrospettiva.md"
+    descrivi retrospettiva.md "la retrospettiva: i consigli per il progetto (numerati, con il file); applica solo quelli approvati"
+    # I commenti del proprietario scritti dopo l'ultima retrospettiva: correzioni e scelte
+    pf_issue_commenti "$ISSUE" | jq -r --arg t "$T_RETRO" --arg o "$PROPRIETARIO" \
+      '(map(.corpo | startswith($t)) | rindex(true)) as $i | [to_entries[] | select(.key > ($i // -1) and .value.autore == $o) | .value.corpo] | join("\n\n---\n\n")' > "$CONTESTO/istruzioni.md"
+    descrivi istruzioni.md "i commenti del proprietario dopo la retrospettiva: correzioni e scelte, hanno la precedenza (vuoto se nessuno)" ;;
   editor)
     specifica; differenze ;;
   *) errore "ruolo sconosciuto: $ruolo"; exit 2 ;;

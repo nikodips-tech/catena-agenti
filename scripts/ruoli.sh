@@ -12,6 +12,8 @@ case "$ruolo" in
   developer)   modello=sonnet; turni=70; timeout=55; strumenti="Read,Glob,Grep,Write,Edit,Bash(bash $CATENA/scripts/controlli.sh:*),Bash(bash $CATENA/scripts/rimuovi.sh:*)" ;;
   revisore)    modello=opus;   turni=30; timeout=25; strumenti="Read,Glob,Grep,Write" ;;
   editor)      modello=haiku;  turni=15; timeout=15; strumenti="Read,Glob,Grep,Write,Edit" ;;
+  retrospettiva) modello=opus; turni=30; timeout=20; strumenti="Read,Glob,Grep,Write" ;;
+  applica)     modello=sonnet; turni=40; timeout=25; strumenti="Read,Glob,Grep,Write,Edit" ;;
   *) errore "ruolo sconosciuto: $ruolo"; exit 2 ;;
 esac
 chiave=${ruolo//-/_}

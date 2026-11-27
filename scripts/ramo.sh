@@ -18,6 +18,10 @@ case "$ruolo" in
   team-leader) git checkout -q -B "$base" "origin/$base" ;;
   # Il developer lavora sul ramo dell'issue, creato dalla base se non c'è
   developer) ramo_checkout "$ramo" "$base" ;;
+  # La retrospettiva legge la base com'è, come il team leader
+  retrospettiva) git checkout -q -B "$base" "origin/$base" ;;
+  # I consigli approvati si applicano su un ramo proprio, creato dalla base di sviluppo
+  applica) base=$RAMO_SVILUPPO; ramo=$(ramo_retro "$ISSUE"); ramo_checkout "$ramo" "$base" ;;
   # Revisore ed editor guardano il lavoro finito: il ramo deve esistere
   revisore|editor)
     git show-ref -q --verify "refs/remotes/origin/$ramo" || { errore "il ramo $ramo non esiste"; exit 1; }
