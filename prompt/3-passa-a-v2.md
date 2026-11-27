@@ -36,5 +36,12 @@ Le etichette del vecchio metodo non servono più: dopo il merge, `gh label delet
 
 ## 4. Dopo il merge
 
+Gli eventi delle issue (`auto`, i commenti) usano il `catena.yml` del **ramo predefinito** del
+repository; i passi (`workflow_dispatch`) quello di `develop`. Se il ramo predefinito non è
+`develop` (di solito `master`), il nuovo `catena.yml` deve arrivare anche lì prima della
+prossima `auto`, altrimenti l'avvio resta su v1 e i passi girano su v2: una PR da `develop` al
+ramo predefinito, che unisce il proprietario.
+Fino ad allora nessuna `auto`.
+
 Niente da lanciare. Il resoconto dice cosa è cambiato e che la prima issue con `auto` mostrerà
 le etichette `turn-*`. Mai l'etichetta `auto` da qui.
