@@ -14,6 +14,7 @@ mkdir -p "$ESITO_DIR" "$LOG_DIR"
 uscita=$(cat "$ESITO_DIR/claude-exit" 2> /dev/null || echo "?")
 [ -f esito.json ] && mv esito.json "$ESITO_DIR/esito.json"
 [ -f note-developer.md ] && mv note-developer.md "$ESITO_DIR/note.md"
+[ -f domanda-developer.md ] && mv domanda-developer.md "$ESITO_DIR/domanda.md"
 
 avviso_file() { # <titolo> <elenco>
   [ -n "$2" ] || return 0
@@ -37,23 +38,13 @@ fotografa() {
 }
 stato() { echo "$1" > "$ESITO_DIR/stato"; }
 
-# File protetti: mai un blocco, si rimettono com'erano e si avvisa
-avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"
+# File protetti: mai un blocco, si rimettono com'erano e si avvisa (non per `applica`: i consigli approvati
+# toccano CLAUDE.md, .claude/, .catena.yml, e lo scarto lo fa il suo caso più sotto)
+if [ "$ruolo" != applica ]; then avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"; fi
 fotografa
 
-# Dipendenze dichiarate non aggiunte (dipendenze.sh): Claude non è partito, tentativo fallito
-if [ "$ruolo" = developer ] && [ -s "$ESITO_DIR/dipendenze-fallite.md" ]; then
-  stato fallito
-  cp "$ESITO_DIR/dipendenze-fallite.md" "$ESITO_DIR/messaggio.md"
-  echo "dipendenze dichiarate non aggiunte" > "$ESITO_DIR/motivo.txt"
-  : > "$ESITO_DIR/test-ripristinati.txt"
-  echo "Claude non è partito" > "$ESITO_DIR/consumo.txt"
-  log "developer: dipendenze non aggiunte"
-  exit 0
-fi
-
 case "$ruolo" in
-  team-leader|revisore)
+  team-leader|revisore|retrospettiva)
     # Non devono toccare file: se lo fanno, le modifiche si ignorano
     avviso_file "File modificati e ignorati (il ruolo non modifica il repo)" "$(cat "$ESITO_DIR/file.txt")"
     if [ -f "$ESITO_DIR/esito.json" ]; then stato ok; else stato mancante; echo "esito.json non trovato (uscita di Claude: $uscita)" > "$ESITO_DIR/messaggio.md"; fi ;;
@@ -61,11 +52,6 @@ case "$ruolo" in
   developer)
     e2e=$(grep -P "$RE_E2E" "$ESITO_DIR/file.txt" || true)
     if [ -n "$e2e" ]; then mapfile -t f <<< "$e2e"; ripristina "${f[@]}"; avviso_file "Test e2e toccati e ripristinati" "$e2e"; fi
-    # Con la chiave `dipendenze` il lock lo scrive solo dipendenze.sh: il resto torna com'era
-    if dipendenze_attive; then
-      lock=$(git diff --cached --name-only --no-renames "${DOPO_DIPENDENZE:-$INIZIO}" | grep -P "$RE_LOCK" || true)
-      if [ -n "$lock" ]; then mapfile -t f <<< "$lock"; ripristina_da "${DOPO_DIPENDENZE:-$INIZIO}" "${f[@]}"; avviso_file "Lock toccati e ripristinati (le dipendenze nuove le aggiunge la catena, se dichiarate nel sotto-task)" "$lock"; fi
-    fi
     # I test della base si possono modificare e cancellare (il revisore li giudica). Si
     # ripristinano solo quelli che il revisore ha bloccato (test-bloccati.txt, contesto.sh)
     bloccati="$CONTESTO/test-bloccati.txt"; [ -f "$bloccati" ] || : > "$bloccati"
@@ -81,11 +67,28 @@ case "$ruolo" in
     # Per esito-developer.sh: se i controlli falliscono, l'escalation parte subito
     printf '%s' "$toccati" > "$ESITO_DIR/test-ripristinati.txt"
     fotografa
+    # Una domanda al team leader: il lavoro fatto resta (patch), niente formattazione né controlli
+    if [ -s "$ESITO_DIR/domanda.md" ]; then
+      stato domanda
+      consumo "$ESITO_DIR/claude.json" > "$ESITO_DIR/consumo.txt"
+      log "developer: domanda al team leader, $(cat "$ESITO_DIR/consumo.txt")"
+      exit 0
+    fi
     # Formattazione di tutto ciò che cambia rispetto alla base, test compresi
     mapfile -t cambiati < <(git diff --cached --name-only --diff-filter=d --no-renames "origin/$BASE" || true)
     [ "${#cambiati[@]}" -eq 0 ] || bash "$CATENA/scripts/controlli.sh" formatta "${cambiati[@]}" > /dev/null 2>&1 || true
     fotografa
-    if [ ! -s "$ESITO_DIR/file.txt" ] && [ -z "$(git log --format=%s "origin/$BASE..HEAD" | grep -E "^wip: #$SOTTOTASK " || true)" ]; then
+    # Manifest o lock cambiati: `aggiorna` riallinea il lock al manifest (anche se il developer
+    # se n'è dimenticato o l'ha scritto a mano). Con la rete e nel container dei controlli
+    aggiorna_ko=""
+    if [ -n "$(cfg aggiorna)" ] && grep -qP -- "$RE_MANIFEST|$RE_LOCK" "$ESITO_DIR/file.txt"; then
+      if bash "$CATENA/scripts/controlli.sh" aggiorna > "$LOG_DIR/aggiorna-raccolta.log" 2>&1; then fotografa; else aggiorna_ko=1; fi
+    fi
+    if [ -n "$aggiorna_ko" ]; then
+      stato fallito
+      tail -c 4000 "$LOG_DIR/aggiorna-raccolta.log" > "$ESITO_DIR/messaggio.md"
+      echo "aggiornamento delle dipendenze fallito" > "$ESITO_DIR/motivo.txt"
+    elif [ ! -s "$ESITO_DIR/file.txt" ] && [ -z "$(git log --format=%s "origin/$BASE..HEAD" | grep -E "^wip: #$SOTTOTASK " || true)" ]; then
       stato fallito
       echo "il developer non ha modificato nessun file (uscita di Claude: $uscita)" | tee "$ESITO_DIR/messaggio.md" > "$ESITO_DIR/motivo.txt"
     # `if` e non `$?`: la shell di Actions esce al primo errore e lo stato non verrebbe scritto
@@ -103,6 +106,13 @@ case "$ruolo" in
   editor)
     fuori=$(grep -vE "$RE_DOCS" "$ESITO_DIR/file.txt" || true)
     if [ -n "$fuori" ]; then mapfile -t f <<< "$fuori"; ripristina "${f[@]}"; avviso_file "File fuori da docs/ e README scartati" "$fuori"; fi
+    fotografa
+    if [ -s "$ESITO_DIR/file.txt" ]; then stato ok; else stato vuoto; fi ;;
+
+  applica)
+    # Solo i file dei consigli (RE_APPLICA); mai .github/ né .env: il resto si scarta con un avviso
+    fuori=$({ grep -vP "$RE_APPLICA" "$ESITO_DIR/file.txt"; grep -P '^\.github/|(^|/)\.env' "$ESITO_DIR/file.txt"; } | sort -u || true)
+    if [ -n "$fuori" ]; then mapfile -t f <<< "$fuori"; ripristina "${f[@]}"; avviso_file "File fuori dall'ambito della retrospettiva scartati" "$fuori"; fi
     fotografa
     if [ -s "$ESITO_DIR/file.txt" ]; then stato ok; else stato vuoto; fi ;;
 

@@ -30,20 +30,23 @@ piattaforme/gitlab/     segnaposto
 modello-repo/           cosa va in ogni progetto: catena.yml, ci.yml, release, tag-master, in-develop, .catena.yml, CLAUDE.md, modelli di issue e PR,
                         product owner, skill /catena e agenti sottili per la sessione locale
 docs/                   specifica, corsie, flusso, permessi, configurazione, CI, runner, portabilità, esempi
-prompt/                 i prompt per migrare o aggiornare un progetto con Claude Code
+prompt/                 i prompt per installare un progetto, passarlo da v1 a v2 (3-passa-a-v2.md) o pubblicare la catena
 ```
 
 ## Versioni
 
-I progetti richiamano i workflow con `@v1`. Una correzione alla catena si pubblica spostando
+I progetti richiamano i workflow con `@v2`. Una correzione alla catena si pubblica spostando
 il tag:
 
 ```bash
-git tag -f v1 && git push -f origin v1
+git tag -f v2 && git push -f origin v2
 ```
 
-Tutti i progetti la prendono alla prossima esecuzione. Per bloccare un progetto a una
-versione, nel suo `catena.yml` si sostituisce `@v1` con un tag fisso (`@v1.0.0`) o uno SHA.
+Tutti i progetti sulla v2 la prendono alla prossima esecuzione. Un cambio incompatibile del
+wrapper `catena.yml` (etichette, passi, input) è una nuova versione maggiore: la v1 resta dov'è,
+per i progetti non ancora migrati, e `prompt/3-passa-a-v2.md` porta un progetto da v1 a v2. Per
+bloccare un progetto a una versione, nel suo `catena.yml` si sostituisce `@v2` con un tag fisso
+(`@v2.0.0`) o uno SHA.
 
 ## Regole fisse
 

@@ -9,7 +9,7 @@ quattro sottoagenti sottili (`modello-repo/.claude/agents/catena-*.md`).
 
 - I sottoagenti non contengono i prompt: hanno solo il frontmatter (modello, strumenti) e una
   riga che dice "leggi le istruzioni nel file indicato". La skill scarica `agenti/*.md` e
-  `scripts/controlli.sh` e `scripts/rimuovi.sh` dal repository della catena al tag `v1` in una
+  `scripts/controlli.sh` e `scripts/rimuovi.sh` dal repository della catena al tag `v2` in una
   cartella temporanea, all'inizio del giro. La fonte resta una sola.
 - La skill fa ciò che su GitHub fanno `avvio.sh` e gli `esito-*.sh`: ramo, ordine dei passi,
   ripristino dei file protetti, formattazione, controlli, commit, PR. Niente App, niente

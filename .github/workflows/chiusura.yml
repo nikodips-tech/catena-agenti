@@ -9,6 +9,10 @@ on:
       issue:
         type: string
         required: true
+      retrospettiva:
+        description: Pull request dei consigli della retrospettiva (non si unisce da sola)
+        type: boolean
+        default: false
       catena_repo:
         type: string
         default: nikodips-tech/catena-agenti
@@ -37,6 +41,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       PIATTAFORMA: github
       ISSUE: ${{ inputs.issue }}
+      RETROSPETTIVA: ${{ inputs.retrospettiva }}
     steps:
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         id: app
@@ -71,4 +76,4 @@ jobs:
         if: failure()
         run: |
           gh issue comment "$ISSUE" --body "Catena, chiusura: non sono riuscito ad aprire la pull request. Esecuzione: $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID"
-          gh issue edit "$ISSUE" --remove-label in-corso --add-label bloccato
+          [ "$RETROSPETTIVA" = true ] || gh issue edit "$ISSUE" --remove-label turn-ci --add-label turn-human

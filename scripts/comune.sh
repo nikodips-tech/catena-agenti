@@ -24,6 +24,8 @@ CONFIG=${CATENA_CONFIG:-$REPO_DIR/.catena.yml}
 # Titoli dei commenti che fanno da stato
 T_SPECIFICA="## Specifica"
 T_DOMANDA="## Domanda"
+T_DOMANDA_DEV="## Domanda del developer"
+T_RISPOSTA="## Risposta del team leader"
 T_REV_OK="## Revisione: approvata"
 T_REV_SOTTOTASK="## Revisione: sottotask aggiunti"
 T_REV_RIMOSSI="## Revisione: file rimossi"
@@ -31,16 +33,21 @@ T_REV_RISERVE="## Revisione: con riserve"
 T_ESCALATION="## Escalation"
 T_RIPARAZIONE="## Riparazione"
 T_PR_PRONTA="## Pull request pronta"
+T_RETRO="## Retrospettiva"
 
 # Etichette
-E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto
-E_IN_CORSO=in-corso; E_DOMANDA=domanda; E_BLOCCATO=bloccato; E_UNIONE=unione-automatica
+E_TASK=task; E_HOTFIX=hotfix; E_SOTTOTASK=sotto-task; E_AUTO=auto; E_UNIONE=unione-automatica
 E_IN_DEVELOP=in-develop
+# Etichette di turno: sull'issue (e sul sotto-task su cui si lavora) una sola alla volta, di chi è la palla
+E_TURN_TL=turn-team-leader; E_TURN_DEV=turn-developer; E_TURN_REV=turn-reviewer
+E_TURN_ED=turn-editor; E_TURN_CI=turn-ci; E_TURN_HUMAN=turn-human
+E_RETRO=retrospective; E_RETRO_OK=retrospective-approved
 
 # Tetti
 MAX_TENTATIVI=2        # tentativi del developer per sottotask
 MAX_GIRI_REVISIONE=2   # giri di revisione prima delle riserve
 MAX_ESCALATION=1       # escalation al team leader per sottotask
+MAX_DOMANDE=2          # domande del developer al team leader per sottotask
 MAX_RIPARAZIONI=1      # riparazioni dopo una CI rossa
 
 # ---------------------------------------------------------------- configurazione
@@ -61,6 +68,8 @@ RE_E2E=$(cfg file_e2e '(^|/)(e2e|e2e-screenshots)/|playwright\.config|\.e2e\.')
 RE_PROTETTI='^(\.github/|\.gitlab-ci|\.gitlab/|\.claude/)|(^|/)CLAUDE\.md$|(^|/)\.catena\.yml$|(^|/)\.env($|\.(?!example$))'
 [ -z "$(cfg file_protetti)" ] || RE_PROTETTI="$RE_PROTETTI|$(cfg file_protetti)"
 RE_DOCS=$(cfg docs '^docs/|^README\.md$')
+# File che la retrospettiva approvata può modificare (applica); mai .github/ né .env
+RE_APPLICA='(^|/)CLAUDE\.md$|^\.claude/|^\.catena\.yml$|^docs/|^README\.md$'
 WORKFLOW_CATENA=$(cfg workflow_catena catena.yml)
 # unione: l'issue si chiude quando la PR entra nella base; produzione: entrata in develop
 # resta aperta con `in-develop` e la chiude il rilascio (tag-master del progetto)
@@ -121,6 +130,19 @@ conta_commenti() {
   pf_issue_commenti "$issue" | jq -r --args '[.[] | select(.corpo as $c | $ARGS.positional | any(. as $t | $c | startswith($t)))] | length' "$@"
 }
 
+# domanda_aperta <issue o sotto-task>: vero se, tra i commenti che cominciano con T_DOMANDA_DEV o
+# T_RISPOSTA, l'ultimo è una domanda del developer (il team leader non ha ancora risposto)
+domanda_aperta() {
+  pf_issue_commenti "$1" | jq -e --arg d "$T_DOMANDA_DEV" --arg r "$T_RISPOSTA" \
+    '[.[] | select(.corpo | startswith($d) or startswith($r))] | last | (.corpo // "") | startswith($d)' > /dev/null
+}
+
+# domande_md <issue o sotto-task>: le domande del developer e le risposte, in ordine
+domande_md() {
+  pf_issue_commenti "$1" | jq -r --arg d "$T_DOMANDA_DEV" --arg r "$T_RISPOSTA" \
+    '[.[] | select(.corpo | startswith($d) or startswith($r)) | .corpo] | join("\n\n---\n\n")'
+}
+
 # aspetta_produzione <base>: vero se l'issue, unita in quella base, resta aperta fino al rilascio
 aspetta_produzione() { [ "$CHIUDI_ISSUE" = produzione ] && [ "$1" = "$RAMO_SVILUPPO" ]; }
 
@@ -129,7 +151,7 @@ aspetta_produzione() { [ "$CHIUDI_ISSUE" = produzione ] && [ "$1" = "$RAMO_SVILU
 riferimento_issue() { if aspetta_produzione "$2"; then echo "Refs #$1"; else echo "Closes #$1"; fi; }
 
 # issue_unita <issue> <base> <testo>: l'issue dopo l'unione: chiusa, oppure aperta con
-# `in-develop` fino al rilascio; via `in-corso` e `domanda`
+# `in-develop` fino al rilascio; senza turno; poi, se il giro ha avuto problemi, la retrospettiva
 issue_unita() {
   if aspetta_produzione "$2"; then
     pf_commenta_testo "$1" "$3 Resta aperta finché non va in produzione: se qualcosa non va, scrivilo qui."
@@ -138,7 +160,31 @@ issue_unita() {
     [ "$(pf_issue_stato "$1")" != OPEN ] || pf_issue_chiudi "$1"
     pf_commenta_testo "$1" "$3"
   fi
-  pf_etichetta_togli "$1" "$E_IN_CORSO,$E_DOMANDA"
+  turno "$1" ""
+  retrospettiva_avvia "$1" || log "retrospettiva non avviata"
+}
+
+# ramo_retro <issue>: il ramo della PR che applica i consigli della retrospettiva
+ramo_retro() { echo "retrospettiva/issue-$1"; }
+
+# giro_con_problemi <issue>: vero se il giro ha avuto domande, giri di revisione, riparazioni,
+# risultati non validi, escalation, domande del developer o tentativi falliti
+giro_con_problemi() {
+  local n
+  if [ "$(conta_commenti "$1" "$T_DOMANDA" "$T_REV_SOTTOTASK" "$T_REV_RIMOSSI" "$T_REV_RISERVE" "$T_RIPARAZIONE" \
+    "Team leader: risultato non valido" "Revisore: risultato non valido")" -gt 0 ]; then return 0; fi
+  # Sotto-task anche chiusi
+  for n in $(pf_sottoissue "$1" | jq -r '.[].numero'); do
+    if [ "$(conta_commenti "$n" "$T_ESCALATION" "$T_DOMANDA_DEV" "Tentativo ")" -gt 0 ]; then return 0; fi
+  done
+  return 1
+}
+
+# retrospettiva_avvia <issue>: se la chiave `retrospettiva` non è `no` e il giro ha avuto problemi
+retrospettiva_avvia() {
+  [ "$(cfg retrospettiva si)" != no ] || return 0
+  if giro_con_problemi "$1"; then passo retrospettiva "$1"; fi
+  return 0
 }
 
 # corsia_di <specifica>: diretta | completa (la riga "Corsia: diretta" nella specifica)
@@ -157,24 +203,12 @@ elenco_riga() {
 # developer non può toccare (la riga "Test bloccati: a, b" del sotto-task), uno per riga
 test_bloccati() { elenco_riga "$1" "Test bloccati"; }
 
-# Dipendenze nuove dichiarate nel sotto-task (o nella specifica in corsia diretta): le aggiunge
-# dipendenze.sh prima di Claude. Un nome è una parola sola (niente spazi né caratteri della shell)
-T_DIP="Dipendenze nuove"; T_DIP_SVILUPPO="Dipendenze di sviluppo nuove"; T_DIP_TOGLI="Dipendenze da togliere"
-RE_PACCHETTO='^[A-Za-z0-9@][A-Za-z0-9@/._~^:+-]*$'
-# dipendenze_attive: vero se .catena.yml ha almeno un comando delle dipendenze
-dipendenze_attive() { [ -n "$(cfg dipendenze)$(cfg dipendenze_sviluppo)$(cfg dipendenze_togli)" ]; }
-# Con le dipendenze attive il lock lo scrive solo dipendenze.sh: raccolta.sh rimette il resto
-RE_LOCK=$(cfg file_lock '(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock)$')
-# dipendenze_righe: da stdin, le righe delle dipendenze (nuove, di sviluppo, da togliere)
-dipendenze_righe() { tr -d '\r' | grep -E "^($T_DIP|$T_DIP_SVILUPPO|$T_DIP_TOGLI):" | sort -u || true; }
-
-# righe_dipendenze <file esito> <elemento jq>: le righe delle dipendenze dichiarate
-righe_dipendenze() {
-  local d
-  d=$(jq -r "($2.dipendenze // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP" "$d"
-  d=$(jq -r "($2.dipendenze_sviluppo // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_SVILUPPO" "$d"
-  d=$(jq -r "($2.dipendenze_togli // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_TOGLI" "$d"
-}
+# Manifest delle dipendenze (li giudica il revisore, manifest.diff) e lock (enormi: fuori dal diff)
+RE_MANIFEST=$(cfg file_dipendenze '(^|/)(package\.json|composer\.json|requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|go\.mod|Gemfile)$')
+RE_LOCK='(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock|go\.sum)$'
+LOCK_ESCLUSI=(':(exclude,glob)**/package-lock.json' ':(exclude,glob)**/npm-shrinkwrap.json' ':(exclude,glob)**/yarn.lock'
+  ':(exclude,glob)**/pnpm-lock.yaml' ':(exclude,glob)**/composer.lock' ':(exclude,glob)**/Cargo.lock'
+  ':(exclude,glob)**/poetry.lock' ':(exclude,glob)**/uv.lock' ':(exclude,glob)**/Gemfile.lock' ':(exclude,glob)**/go.sum')
 
 # righe_sottotask <file esito> <elemento jq>: le righe di servizio in fondo al corpo di un
 # sotto-task. `== false` e non `// true`: per jq `false // true` vale true
@@ -183,21 +217,15 @@ righe_sottotask() {
   [ "$(jq -r "$2.test == false" "$1")" != true ] || printf '\nTest: no\n'
   tb=$(jq -r "($2.test_bloccati // []) | join(\", \")" "$1")
   [ -z "$tb" ] || printf '\nTest bloccati: %s\n' "$tb"
-  righe_dipendenze "$1" "$2"
 }
 
-# Validazione jq delle dipendenze dichiarate di un oggetto (sotto-task o specifica diretta)
-DIPENDENZE_VALIDE='(((.dipendenze // []) | type) == "array" and ((.dipendenze_sviluppo // []) | type) == "array"
-  and ((.dipendenze_togli // []) | type) == "array"
-  and all(((.dipendenze // []) + (.dipendenze_sviluppo // []) + (.dipendenze_togli // []))[]; type == "string" and test("'"$RE_PACCHETTO"'")))'
 # Validazione jq di un elenco di sotto-task (team leader e revisore)
 SOTTOTASK_VALIDI='all(.[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string"
   and ((.test // true) | type) == "boolean"
-  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0)
-  and '"$DIPENDENZE_VALIDE"')'
+  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0))'
 
 # esegui <comando shell>: nella `cartella` del progetto, nel `container` se configurato
-# (controlli.sh, dipendenze.sh)
+# (controlli.sh)
 esegui() {
   local cartella container
   cartella=$(cfg cartella .); container=$(cfg container)
@@ -208,6 +236,62 @@ esegui() {
   else
     (cd "$REPO_DIR/$cartella" && NO_COLOR=1 FORCE_COLOR=0 CI=1 sh -c "$1")
   fi
+}
+
+# ---------------------------------------------------------------- turni
+# Sull'issue una sola etichetta `turn-*` alla volta: di chi è la palla. `turn-human` = aspetta il
+# proprietario (domanda, blocco, preflight): un suo commento o `auto` la fa ripartire. Lo stato
+# vero resta nei commenti e nel ramo (avvio.sh riparte da lì); l'etichetta dice di chi è il turno.
+
+# turno <issue> <etichetta o vuoto>: toglie i `turn-*` diversi da quella e la aggiunge se manca
+turno() {
+  local issue=$1 nuova=${2:-} presenti togli="" e
+  presenti=$(pf_issue_etichette "$issue")
+  for e in $presenti; do
+    if [[ "$e" == turn-* && "$e" != "$nuova" ]]; then togli+="${togli:+,}$e"; fi
+  done
+  if [ -n "$togli" ]; then pf_etichetta_togli "$issue" "$togli"; fi
+  if [ -n "$nuova" ] && ! ha "$presenti" "$nuova"; then pf_etichetta_aggiungi "$issue" "$nuova"; fi
+  return 0
+}
+
+# in_corso <etichette>: vero se c'è un `turn-*` diverso da turn-human
+in_corso() {
+  local e
+  for e in $1; do
+    if [[ "$e" == turn-* && "$e" != "$E_TURN_HUMAN" ]]; then return 0; fi
+  done
+  return 1
+}
+
+# issue_in_corso: JSON [{numero, etichette[], aggiornata}] delle issue principali (non sotto-task) in corso
+issue_in_corso() {
+  pf_issue_aperte | jq --arg s "$E_SOTTOTASK" --arg h "$E_TURN_HUMAN" \
+    '[.[] | select((.etichette | index($s) | not) and any(.etichette[]; startswith("turn-") and . != $h))]'
+}
+
+# passo <passo> <issue> [sottotask] [tentativo] [file nota]: mette il turno e avvia il passo
+passo() {
+  local t=""
+  case "$1" in
+    team-leader) t=$E_TURN_TL ;;
+    developer) t=$E_TURN_DEV ;;
+    revisore) t=$E_TURN_REV ;;
+    editor) t=$E_TURN_ED ;;
+    chiusura) t=$E_TURN_CI ;;
+  esac
+  if [ -n "$t" ]; then
+    turno "$2" "$t"
+    if [ -n "${3:-}" ] && [ "$3" != "$2" ] && { [ "$1" = developer ] || [ "$1" = team-leader ]; }; then turno "$3" "$t"; fi
+  fi
+  pf_passo_avvia "$@"
+}
+
+# fermo <issue> [sottotask]: aspetta il proprietario: l'issue a turn-human, il sotto-task senza turno
+fermo() {
+  turno "$1" "$E_TURN_HUMAN"
+  if [ -n "${2:-}" ] && [ "$2" != "$1" ]; then turno "$2" ""; fi
+  return 0
 }
 
 # ---------------------------------------------------------------- git

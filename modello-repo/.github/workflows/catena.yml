@@ -1,10 +1,11 @@
 # La catena di agenti in questo progetto: un solo file, che richiama i workflow riutilizzabili
-# di nikodips-tech/catena-agenti (tag v1). Qui ci sono solo gli eventi e le condizioni; tutta la
+# di nikodips-tech/catena-agenti (tag v2). Qui ci sono solo gli eventi e le condizioni; tutta la
 # logica sta nella catena. Configurazione del progetto: .catena.yml nella radice.
 #
 # Eventi:
 #   issues labeled `auto`         → avvio (solo se la mette il proprietario)
-#   issue_comment del proprietario su un'issue `domanda` → avvio (la risposta fa ripartire)
+#   issues labeled `retrospective-approved` → avvio: applica i consigli della retrospettiva (solo il proprietario)
+#   issue_comment del proprietario su un'issue `turn-human` → avvio (la risposta fa ripartire)
 #   workflow_dispatch             → un passo della catena (lo usano gli script, o un avvio a mano)
 #   workflow_run della CI         → unione delle pull request con `unione-automatica`
 #   pull_request closed           → ordine dopo un'unione o una chiusura fatta a mano
@@ -24,7 +25,7 @@ on:
       passo:
         description: Passo della catena
         type: choice
-        options: [avvio, team-leader, developer, revisore, editor, chiusura]
+        options: [avvio, team-leader, developer, revisore, editor, chiusura, retrospettiva, applica, chiusura-retrospettiva]
         required: true
       issue:
         description: Numero dell'issue principale
@@ -55,9 +56,9 @@ permissions: {}
 jobs:
   avvio:
     if: >-
-      (github.event_name == 'issues' && github.event.label.name == 'auto') ||
+      (github.event_name == 'issues' && contains(fromJSON('["auto","retrospective-approved"]'), github.event.label.name)) ||
       (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
-       contains(github.event.issue.labels.*.name, 'domanda') &&
+       contains(github.event.issue.labels.*.name, 'turn-human') &&
        github.event.comment.user.login == github.repository_owner) ||
       (github.event_name == 'workflow_dispatch' && inputs.passo == 'avvio')
     concurrency:
@@ -68,22 +69,23 @@ jobs:
       issues: write
       actions: write
       pull-requests: read
-    uses: nikodips-tech/catena-agenti/.github/workflows/avvio.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/avvio.yml@v2
     with:
       issue: ${{ github.event.issue.number || inputs.issue }}
       evento: ${{ github.event_name == 'issues' && 'etichetta' || github.event_name == 'issue_comment' && 'commento' || 'dispatch' }}
       chi: ${{ github.event.sender.login }}
+      etichetta: ${{ github.event.label.name }}
     secrets: inherit
 
   agente:
-    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["team-leader","developer","revisore","editor"]'), inputs.passo)
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["team-leader","developer","revisore","editor","retrospettiva","applica"]'), inputs.passo)
     permissions:
       contents: write
       issues: write
       actions: write
       pull-requests: write
       packages: read   # il container su ghcr.io, anche privato
-    uses: nikodips-tech/catena-agenti/.github/workflows/agente.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/agente.yml@v2
     with:
       ruolo: ${{ inputs.passo }}
       issue: ${{ inputs.issue }}
@@ -93,14 +95,15 @@ jobs:
     secrets: inherit
 
   chiusura:
-    if: github.event_name == 'workflow_dispatch' && inputs.passo == 'chiusura'
+    if: github.event_name == 'workflow_dispatch' && contains(fromJSON('["chiusura","chiusura-retrospettiva"]'), inputs.passo)
     permissions:
       contents: read
       issues: write
       pull-requests: write
-    uses: nikodips-tech/catena-agenti/.github/workflows/chiusura.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/chiusura.yml@v2
     with:
       issue: ${{ inputs.issue }}
+      retrospettiva: ${{ inputs.passo == 'chiusura-retrospettiva' }}
     secrets: inherit
 
   unione:
@@ -117,7 +120,7 @@ jobs:
       issues: write
       pull-requests: write
       actions: write
-    uses: nikodips-tech/catena-agenti/.github/workflows/unione.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/unione.yml@v2
     with:
       ramo: ${{ github.event.workflow_run.head_branch }}
       sha: ${{ github.event.workflow_run.head_sha }}
@@ -131,7 +134,7 @@ jobs:
       contents: write
       issues: write
       actions: write
-    uses: nikodips-tech/catena-agenti/.github/workflows/pr-chiusa.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/pr-chiusa.yml@v2
     with:
       pr: ${{ github.event.pull_request.number }}
       ramo: ${{ github.event.pull_request.head.ref }}
@@ -145,5 +148,5 @@ jobs:
       contents: read
       issues: write
       actions: write
-    uses: nikodips-tech/catena-agenti/.github/workflows/guardiano.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/guardiano.yml@v2
     secrets: inherit

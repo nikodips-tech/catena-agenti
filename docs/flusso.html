@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catena di agenti: il flusso</title>
+<style>
+  :root {
+    --ai: #6d4aff; --ai-bg: #f0ecff;
+    --sc: #1f8a7a; --sc-bg: #e6f5f2;
+    --um: #c77d0a; --um-bg: #fdf3e1;
+    --fg: #1d2330; --muted: #667085; --line: #c3c9d4; --bg: #f7f8fa; --card: #fff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+  header { padding: 14px 22px 6px; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); }
+  .scenari { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 22px; }
+  .scenari button, .comandi button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 12px; cursor: pointer; font: inherit; color: var(--fg); }
+  .scenari button.attivo { background: var(--fg); color: #fff; border-color: var(--fg); }
+  main { display: flex; gap: 16px; padding: 0 22px 22px; align-items: flex-start; }
+  .schema { flex: 1 1 620px; min-width: 520px; background: var(--card); border: 1px solid #e3e6ec; border-radius: 12px; padding: 6px; }
+  svg { width: 100%; height: auto; display: block; }
+  aside { flex: 0 0 390px; display: flex; flex-direction: column; gap: 12px; }
+  .box { background: var(--card); border: 1px solid #e3e6ec; border-radius: 12px; padding: 12px 14px; }
+  .box h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+  .comandi { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .comandi .passo { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #testo { min-height: 84px; margin-top: 10px; }
+  #testo b { font-weight: 600; }
+  .etichette { display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; }
+  .chip { font: 12px ui-monospace, Consolas, monospace; padding: 2px 8px; border-radius: 999px; background: #eef1f5; border: 1px solid #d5dae3; }
+  .chip.nuova { border-style: dashed; border-color: #8a94a6; background: #fff; }
+  .chip.turno { background: #1d2330; color: #fff; border-color: #1d2330; }
+  .chip.turno.nuova { border-style: dashed; }
+  .runner { display: flex; flex-direction: column; gap: 6px; }
+  .job { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 8px; border: 1px solid; animation: entra .35s ease-out; }
+  .job .nome { font-weight: 600; flex: 1; }
+  .job .tipo { font-size: 11.5px; white-space: nowrap; }
+  .job.ai { background: var(--ai-bg); border-color: var(--ai); }
+  .job.ai .tipo { color: var(--ai); }
+  .job.script { background: var(--sc-bg); border-color: var(--sc); }
+  .job.script .tipo { color: var(--sc); }
+  .job .pallino { width: 9px; height: 9px; border-radius: 50%; background: currentColor; animation: pulsa 1s infinite alternate; }
+  .job.ai .pallino { color: var(--ai); } .job.script .pallino { color: var(--sc); }
+  .vuoto { color: var(--muted); font-style: italic; padding: 4px 0; }
+  .finiti .job { opacity: .55; animation: none; padding: 3px 9px; font-size: 12.5px; }
+  .finiti .job .pallino { animation: none; opacity: .5; }
+  .contatori { display: flex; gap: 10px; margin-top: 8px; }
+  .contatori div { flex: 1; border-radius: 8px; padding: 6px 10px; }
+  .contatori .ai { background: var(--ai-bg); color: var(--ai); }
+  .contatori .script { background: var(--sc-bg); color: var(--sc); }
+  .contatori strong { font-size: 18px; display: block; }
+  .legenda { display: grid; grid-template-columns: auto 1fr; gap: 5px 9px; align-items: center; font-size: 12.5px; }
+  .sw { width: 26px; height: 14px; border-radius: 4px; border: 2px solid; }
+  .note { font-size: 12.5px; color: var(--muted); }
+  .note code { font-size: 12px; }
+  @keyframes entra { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes pulsa { from { opacity: .35; } to { opacity: 1; } }
+  .nodo rect { transition: stroke-width .25s, filter .25s; }
+  .nodo.attivo rect { stroke-width: 4; filter: drop-shadow(0 0 7px rgba(29,35,48,.35)); }
+  .nodo { cursor: pointer; }
+  .arco path { fill: none; stroke: var(--line); stroke-width: 1.6; transition: stroke .25s, stroke-width .25s; }
+  .arco.nuovo path { stroke-dasharray: 6 4; }
+  .arco.attivo path { stroke: var(--fg); stroke-width: 2.6; }
+  .arco text { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+  .arco.attivo text { fill: var(--fg); font-weight: 600; }
+  @media (max-width: 1050px) { main { flex-direction: column; } aside { flex-basis: auto; width: 100%; } .schema { min-width: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Catena di agenti: il flusso</h1>
+  <p>Il flusso della catena v2: etichette di turno, domanda del developer, retrospettiva. Il dettaglio è in <code>docs/flusso.md</code>.</p>
+</header>
+
+<div class="scenari" id="scenari"></div>
+
+<main>
+  <div class="schema"><svg id="svg" viewBox="0 0 820 1010" role="img" aria-label="Schema del flusso della catena"></svg></div>
+
+  <aside>
+    <div class="box">
+      <div class="comandi">
+        <button id="indietro" title="Passo precedente">◀</button>
+        <button id="gioca" title="Avvia o ferma">▶ Avvia</button>
+        <button id="avanti" title="Passo successivo">▶▶</button>
+        <button id="daccapo" title="Ricomincia">↺</button>
+        <span class="passo" id="passo"></span>
+      </div>
+      <div id="testo"></div>
+    </div>
+
+    <div class="box">
+      <h2>Etichette dell'issue</h2>
+      <div class="etichette" id="etichette"></div>
+    </div>
+
+    <div class="box">
+      <h2>Runner: cosa gira adesso</h2>
+      <div class="runner" id="adesso"></div>
+      <h2 style="margin-top:12px">Già girati in questo scenario</h2>
+      <div class="runner finiti" id="finiti"></div>
+      <div class="contatori">
+        <div class="ai"><strong id="n-ai">0</strong>job con Claude (token)</div>
+        <div class="script"><strong id="n-sc">0</strong>job senza token</div>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>Legenda</h2>
+      <div class="legenda">
+        <span class="sw" style="border-color:var(--ai);background:var(--ai-bg)"></span><span>agente Claude: consuma token del piano</span>
+        <span class="sw" style="border-color:var(--sc);background:var(--sc-bg)"></span><span>script o CI: nessun token</span>
+        <span class="sw" style="border-color:var(--um);background:var(--um-bg)"></span><span>tu: nessun runner acceso mentre si aspetta</span>
+      </div>
+      <p class="note">Ogni job gira su un runner effimero, creato per quel job e poi distrutto. Un agente sono due job: <code>agente</code> (Claude, senza token di piattaforma) ed <code>esito</code> (script che scrivono sull'issue). I controlli del developer girano alla fine del suo job <code>agente</code>, dopo Claude, e non consumano token. Clicca un riquadro per la sua descrizione.</p>
+    </div>
+  </aside>
+</main>
+
+<script>
+// ---------------------------------------------------------------- schema
+const C = 410, R = 690, L = 130;
+const NODI = {
+  prop:    { x: C, y: 42,  t: 'Issue + auto',          s: 'tu',                    k: 'um' },
+  guard:   { x: L, y: 122, t: 'Guardiano',             s: 'ogni ora · script',     k: 'sc', w: 170 },
+  avvio:   { x: C, y: 122, t: 'Avvio',                 s: 'script',                k: 'sc' },
+  tl:      { x: C, y: 215, t: 'Team leader',           s: 'Claude opus',           k: 'ai' },
+  umano:   { x: R, y: 215, t: 'Domanda di prodotto',   s: 'tu · non tecnica',      k: 'um', w: 190 },
+  dev:     { x: C, y: 325, t: 'Developer',             s: 'Claude sonnet · libero', k: 'ai' },
+  esdev:   { x: C, y: 425, t: 'Controlli ed esito',    s: 'script · stesso runner', k: 'sc' },
+  rev:     { x: C, y: 525, t: 'Revisore',              s: 'Claude opus',           k: 'ai' },
+  ed:      { x: C, y: 612, t: 'Editor',                s: 'Claude haiku · docs',   k: 'ai' },
+  chius:   { x: C, y: 692, t: 'Chiusura: PR',          s: 'script · App',          k: 'sc' },
+  ci:      { x: C, y: 778, t: 'CI del progetto',       s: 'script · in parallelo', k: 'sc' },
+  unione:  { x: C, y: 868, t: 'Unione in develop',     s: 'script · App',          k: 'sc' },
+  rilascio:{ x: C, y: 962, t: 'Rilascio in master',    s: 'tu, quando vuoi',       k: 'um' },
+  retro:   { x: R, y: 868, t: 'Retrospettiva',         s: 'Claude opus · se serve', k: 'ai', w: 190 },
+  umano2:  { x: R, y: 778, t: 'Approvi i consigli?',   s: 'tu',                    k: 'um', w: 190 },
+  applica: { x: R, y: 680, t: 'Applica i consigli',    s: 'Claude sonnet',         k: 'ai', w: 190 },
+};
+const INFO = {
+  prop: 'Scrivi i requisiti come li scriverebbe chi chiede la funzione, e metti <b>auto</b> quando vuoi che parta: la priorità la decidi tu.',
+  guard: 'Ogni ora cerca le issue con un turno fermo da più di 90 minuti e senza job attivi, e le fa ripartire dallo stato scritto nei commenti e nel ramo; l\'etichetta dice di chi è il turno.',
+  avvio: 'Controlla che l\'issue sia tua e che nessun\'altra sia in corso, poi passa la mano a chi ha il turno.',
+  tl: 'Legge requisiti e codice. Se manca qualcosa o c\'è una scelta di prodotto, chiede a te. Altrimenti scrive la specifica e i sotto-task. Risponde alle domande del developer e decide nelle escalation.',
+  umano: 'Una domanda in parole non tecniche, per chi ha chiesto la funzione: comportamento, testi, casi limite. Il "come" resta del team leader.',
+  dev: 'Sviluppa il sotto-task in TDD. È libero: può cambiare codice, test, manifest e dipendenze. Il lock lo scrive l\'installazione. Non ha git né token. Se la specifica non regge, chiede al team leader (al massimo 2 volte per sotto-task).',
+  esdev: 'Alla fine del job del developer, dopo Claude: formattazione e gli stessi controlli della CI. Se sono verdi c\'è un commit e il sotto-task si chiude; se sono rossi c\'è un commento nel sotto-task e il turno torna al developer; al secondo rosso c\'è l\'escalation.',
+  rev: 'Confronta il ramo con la specifica. Controlla i test modificati o tolti, se i pacchetti nuovi servono davvero e se ci sono regressioni non richieste. Approva, oppure aggiunge sotto-task di correzione (al massimo 2 giri, poi approva con riserve).',
+  ed: 'Aggiorna solo la documentazione. Quello che tocca fuori da docs si scarta.',
+  chius: 'Apre la PR verso develop con l\'App, così la CI parte da sola. I task si uniscono da soli quando la CI è verde.',
+  ci: 'La CI del progetto: lint, tipi, test e build, un runner per controllo. Se è rossa, il developer fa una riparazione, una volta sola.',
+  unione: 'Con la CI verde: squash in develop, ramo cancellato, issue chiusa, staging. Poi la coda avvia la prossima issue con auto.',
+  rilascio: 'Unisci tu develop in master. Il rilascio gira sull\'unico runner che entra nel server.',
+  retro: 'Solo se nel giro ci sono stati escalation, tentativi falliti, riserve o domande. Legge la storia dell\'issue e scrive per te i consigli, con le istruzioni per approvarli. I consigli per la catena restano nel commento, e li porti tu.',
+  umano2: 'Per approvare metti <b>retrospective-approved</b>; per scartare togli l\'etichetta o chiudi. Se non fai niente non succede niente.',
+  applica: 'Applica solo i consigli approvati. Può toccare CLAUDE.md, .claude/, .catena.yml e le regole del progetto, mai .github/. La sua PR non si unisce da sola: la unisci tu.',
+};
+// [da, a, etichetta, nuovo, curva: x di controllo o percorso]
+const ARCHI = [
+  ['prop', 'avvio', 'auto'],
+  ['guard', 'avvio', 'fermo da 90 min'],
+  ['avvio', 'tl', ''],
+  ['tl', 'umano', 'domanda'],
+  ['umano', 'avvio', 'la tua risposta', false, 'M 690 190 C 690 128, 620 122, 510 122'],
+  ['tl', 'dev', 'sotto-task · risposta'],
+  ['dev', 'tl', 'domanda del developer', false, 200],
+  ['dev', 'esdev', 'consegna'],
+  ['esdev', 'dev', 'rosso · prossimo', false, 250],
+  ['esdev', 'tl', 'rosso ×2: escalation', false, 120],
+  ['esdev', 'rev', 'sotto-task finiti'],
+  ['rev', 'dev', 'correzioni', false, 575],
+  ['rev', 'ed', 'approvata'],
+  ['ed', 'chius', ''],
+  ['chius', 'ci', 'PR'],
+  ['ci', 'unione', 'verde'],
+  ['ci', 'dev', 'rossa: riparazione', false, 'M 510 770 C 640 770, 640 325, 510 325'],
+  ['unione', 'rilascio', 'quando decidi tu'],
+  ['unione', 'retro', 'ci sono stati problemi'],
+  ['retro', 'umano2', 'consigli'],
+  ['umano2', 'applica', 'approvati'],
+  ['applica', 'ci', 'PR che unisci tu', false, 'M 595 690 C 555 700, 560 786, 510 786'],
+];
+const COLORI = { ai: ['--ai', '--ai-bg'], sc: ['--sc', '--sc-bg'], um: ['--um', '--um-bg'] };
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg');
+const el = (tag, att, padre) => { const e = document.createElementNS(NS, tag); for (const k in att) e.setAttribute(k, att[k]); (padre || svg).appendChild(e); return e; };
+const larg = n => NODI[n].w || 200, H = 50;
+
+function percorso(a, b, curva) {
+  const A = NODI[a], B = NODI[b];
+  if (typeof curva === 'string') return curva;
+  if (typeof curva === 'number') {
+    const sx = curva < A.x ? A.x - larg(a) / 2 : A.x + larg(a) / 2;
+    const ex = curva < B.x ? B.x - larg(b) / 2 : B.x + larg(b) / 2;
+    return `M ${sx} ${A.y} C ${curva} ${A.y}, ${curva} ${B.y}, ${ex} ${B.y}`;
+  }
+  if (A.x === B.x) {
+    const su = B.y < A.y;
+    return `M ${A.x} ${A.y + (su ? -H / 2 : H / 2)} L ${B.x} ${B.y + (su ? H / 2 : -H / 2)}`;
+  }
+  const dx = B.x > A.x;
+  return `M ${A.x + (dx ? larg(a) / 2 : -larg(a) / 2)} ${A.y} L ${B.x + (dx ? -larg(b) / 2 : larg(b) / 2)} ${B.y}`;
+}
+
+const defs = el('defs', {});
+const freccia = el('marker', { id: 'f', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#98a1b2' }, freccia);
+
+const archi = {};
+for (const [a, b, testo, nuovo, curva] of ARCHI) {
+  const g = el('g', { class: 'arco' + (nuovo ? ' nuovo' : '') });
+  const p = el('path', { d: percorso(a, b, curva), 'marker-end': 'url(#f)' }, g);
+  const len = p.getTotalLength(), m = p.getPointAtLength(len / 2);
+  const sinistra = m.x < C - 60, verticale = NODI[a].x === NODI[b].x && curva === undefined;
+  if (testo) {
+    const t = el('text', { x: m.x + (sinistra ? -6 : 7), y: m.y + (verticale ? 4 : -5), 'text-anchor': sinistra ? 'end' : 'start' }, g);
+    t.textContent = testo;
+  }
+  archi[a + '>' + b] = { g, p };
+}
+const nodi = {};
+for (const id in NODI) {
+  const n = NODI[id], w = larg(id), [c, bg] = COLORI[n.k];
+  const g = el('g', { class: 'nodo', 'data-id': id });
+  el('rect', { x: n.x - w / 2, y: n.y - H / 2, width: w, height: H, rx: 10, fill: `var(${bg})`, stroke: `var(${c})`, 'stroke-width': 2, 'stroke-dasharray': n.nuovo ? '7 4' : '' }, g);
+  const t1 = el('text', { x: n.x, y: n.y - 3, 'text-anchor': 'middle', 'font-weight': 600, 'font-size': 14 }, g); t1.textContent = n.t;
+  const t2 = el('text', { x: n.x, y: n.y + 14, 'text-anchor': 'middle', 'font-size': 11, fill: `var(${c})` }, g); t2.textContent = n.s;
+  g.addEventListener('click', () => { ferma(); document.getElementById('testo').innerHTML = `<b>${n.t}</b><br>${INFO[id]}`; evidenzia(id, null); });
+  nodi[id] = g;
+}
+const gettone = el('circle', { r: 8, fill: '#1d2330', opacity: 0 });
+
+// ---------------------------------------------------------------- scenari
+const S = nome => ({ nome, k: 'script' });
+const A = (nome, modello) => ({ nome, k: 'ai', modello });
+const agente = (ruolo, modello) => [A('agente: ' + ruolo, modello), S('esito')];
+const CI = [S('ci / lint'), S('ci / tipi'), S('ci / test'), S('ci / build')];
+const NUOVE = new Set();
+
+const P = {
+  issue: { n: 'prop', et: ['task', 'auto'], t: 'Scrivi l\'issue con i requisiti e metti <b>auto</b>. Nessun runner acceso: è il tuo turno.' },
+  avvio: { n: 'avvio', e: 'prop>avvio', et: ['task', 'auto'], j: [S('avvio')], t: '<b>Avvio</b>: controlla che l\'issue sia tua e che non ce ne sia un\'altra in corso, poi dà il turno al team leader.' },
+  tl: { n: 'tl', e: 'avvio>tl', et: ['task', 'turn-team-leader'], j: agente('team leader', 'opus'), t: '<b>Team leader</b>: legge requisiti e codice, scrive la specifica e i sotto-task. Dei due job, solo <i>agente</i> consuma token.' },
+  dev: { n: 'dev', e: 'tl>dev', et: ['task', 'turn-developer'], j: agente('developer', 'sonnet'), t: '<b>Developer</b>: sviluppa il sotto-task in TDD. È libero: codice, test, manifest, dipendenze. Il lock lo scrive l\'installazione. Non ha git né token.' },
+  verde: { n: 'esdev', e: 'dev>esdev', et: ['task', 'turn-developer'], t: '<b>Controlli verdi</b>: girano nello stesso runner, dopo Claude, quindi nessun job nuovo e nessun token. Commit, sotto-task chiuso.' },
+  rev: { n: 'rev', e: 'esdev>rev', et: ['task', 'turn-reviewer'], j: agente('revisore', 'opus'), t: '<b>Revisore</b>: confronta il ramo con la specifica. Controlla test toccati, dipendenze nuove e regressioni. Approvata.' },
+  ed: { n: 'ed', e: 'rev>ed', et: ['task', 'turn-editor'], j: agente('editor', 'haiku'), t: '<b>Editor</b>: aggiorna la documentazione, con il modello più economico.' },
+  chius: { n: 'chius', e: 'ed>chius', et: ['task', 'turn-ci'], j: [S('chiusura')], t: '<b>Chiusura</b>: la PR verso develop la apre l\'App, così la CI parte da sola.' },
+  ci: { n: 'ci', e: 'chius>ci', et: ['task', 'turn-ci'], j: CI, t: '<b>CI</b>: un runner per controllo, in parallelo. Nessun token.' },
+  unione: { n: 'unione', e: 'ci>unione', et: ['task'], j: [S('unione')], t: '<b>Unione</b>: squash in develop, ramo cancellato, issue chiusa, staging. Poi la coda avvia la prossima issue con auto.' },
+};
+const coda = [P.rev, P.ed, P.chius, P.ci, P.unione];
+
+const SCENARI = [
+  { nome: 'Giro liscio', passi: [P.issue, P.avvio, P.tl, P.dev, P.verde, ...coda,
+    { n: 'unione', et: [], t: 'Nessun problema nel giro: <b>niente retrospettiva</b>, nessun token in più.' },
+    { n: 'rilascio', e: 'unione>rilascio', et: [], j: [S('rilascio')], t: '<b>Rilascio</b>, quando decidi tu: unisci develop in master. Gira sul runner di rilascio, l\'unico che entra nel server.' }] },
+
+  { nome: 'Domanda di prodotto', passi: [P.issue, P.avvio,
+    { ...P.tl, t: '<b>Team leader</b>: nella specifica c\'è una scelta che spetta a chi ha chiesto la funzione.' },
+    { n: 'umano', e: 'tl>umano', et: ['task', 'turn-human'], t: '<b>Turno umano</b>: una domanda non tecnica, per esempio "Se l\'utente non ha ancora dati, vede una pagina vuota o un esempio?". Mentre aspetta te non gira niente.' },
+    { n: 'avvio', e: 'umano>avvio', et: ['task', 'turn-team-leader'], j: [S('avvio')], t: 'Rispondi con un commento: l\'avvio ridà il turno al team leader.' },
+    { ...P.tl, t: '<b>Team leader</b>: completa la specifica con la tua risposta e crea i sotto-task.' },
+    P.dev, P.verde, ...coda] },
+
+  { nome: 'Il developer chiede', passi: [P.issue, P.avvio, P.tl,
+    { ...P.dev, t: '<b>Developer</b>: lavorando scopre che la specifica non regge, per esempio perché una funzione che dava per esistente non c\'è.' },
+    { n: 'tl', e: 'dev>tl', et: ['sotto-task', 'turn-team-leader'], j: agente('team leader', 'opus'), t: '<b>Domanda al team leader</b>: il developer la scrive nel sotto-task e il suo esito passa il turno (al massimo 2 domande per sotto-task). Il team leader risponde nel sotto-task o corregge la specifica. Se è una domanda di prodotto, la gira a te.' },
+    { ...P.dev, t: '<b>Developer</b>: riparte con la risposta e trova nel ramo il lavoro già fatto.' },
+    P.verde, ...coda] },
+
+  { nome: 'Test rossi', passi: [P.issue, P.avvio, P.tl, P.dev,
+    { n: 'esdev', e: 'dev>esdev', et: ['task', 'turn-developer'], t: '<b>Controlli rossi</b>: lo script fa un commit wip:, scrive l\'errore nel sotto-task e ridà il turno al developer.' },
+    { n: 'dev', e: 'esdev>dev', et: ['task', 'turn-developer'], j: agente('developer', 'sonnet'), t: '<b>Secondo tentativo</b>: un developer nuovo (gli agenti non hanno memoria) riceve l\'errore e trova nel checkout il lavoro già fatto.' },
+    { n: 'esdev', e: 'dev>esdev', et: ['task', 'turn-developer'], t: '<b>Ancora rosso</b>: si passa all\'escalation.' },
+    { n: 'tl', e: 'esdev>tl', et: ['task', 'turn-team-leader'], j: agente('team leader', 'opus'), t: '<b>Escalation</b>: il team leader riformula il sotto-task, più piccolo o diverso, oppure lo ferma e chiede a te (turn-human).' },
+    { ...P.dev, t: '<b>Developer</b> sul sotto-task riformulato.' }, P.verde, ...coda] },
+
+  { nome: 'Revisione con correzioni', passi: [P.issue, P.avvio, P.tl, P.dev, P.verde,
+    { ...P.rev, t: '<b>Revisore</b>: trova un pacchetto aggiunto e mai usato, e un test della base cancellato senza un motivo nella specifica.' },
+    { n: 'dev', e: 'rev>dev', et: ['task', 'turn-developer'], j: agente('developer', 'sonnet'), t: '<b>Correzione</b>: il sotto-task del revisore dice cosa togliere e quale test rimettere. Quel test resta bloccato: il developer deve cambiare il codice.' },
+    P.verde,
+    { ...P.rev, t: '<b>Seconda revisione</b>: approvata. Al massimo 2 giri di correzione, poi approvazione con riserve, che restano scritte nella PR.' },
+    P.ed, P.chius, P.ci, P.unione] },
+
+  { nome: 'CI rossa', passi: [P.issue, P.avvio, P.tl, P.dev, P.verde, P.rev, P.ed, P.chius,
+    { ...P.ci, t: '<b>CI rossa</b>: per esempio la build, che il developer non lancia.' },
+    { n: 'dev', e: 'ci>dev', et: ['task', 'turn-developer'], j: agente('developer', 'sonnet'), t: '<b>Riparazione</b>: il developer riceve i job falliti e le ultime righe dei log. Una volta sola; se la CI resta rossa, turn-human.' },
+    { ...P.verde, t: '<b>Controlli verdi</b>: commit sul ramo; si torna direttamente alla chiusura, senza un\'altra revisione.' },
+    { ...P.chius, e: null, t: '<b>Chiusura</b>: la PR c\'è già. Un commit vuoto dell\'App fa ripartire la CI.' },
+    { ...P.ci, e: null }, P.unione] },
+
+  { nome: 'Retrospettiva', passi: [
+    { n: 'unione', et: ['task'], t: 'Siamo alla fine di un giro <b>con problemi</b>, per esempio un\'escalation e una CI rossa. La PR è già entrata in develop.' },
+    { n: 'retro', e: 'unione>retro', et: ['task'], j: agente('retrospettiva', 'opus'), t: '<b>Retrospettiva</b>: legge la storia dell\'issue e scrive un commento per te: cosa è andato storto, quali regole cambiare, come approvarle. I consigli per la catena restano nel commento.' },
+    { n: 'umano2', e: 'retro>umano2', et: ['task', 'retrospective'], t: '<b>Tocca a te</b>: per approvare metti <b>retrospective-approved</b>; per scartare togli l\'etichetta. Se non fai niente non succede niente.' },
+    { n: 'applica', e: 'umano2>applica', et: ['task', 'retrospective-approved'], j: agente('applica consigli', 'sonnet'), t: '<b>Applica</b> solo i consigli approvati: CLAUDE.md, .claude/, .catena.yml e regole del progetto. <b>Mai .github/</b>.' },
+    { n: 'ci', e: 'applica>ci', et: ['task'], j: CI, t: 'La sua PR verso develop passa dalla CI ma <b>non si unisce da sola</b>.' },
+    { n: 'unione', e: 'ci>unione', et: [], t: 'La unisci tu, dopo averla letta.' }] },
+
+  { nome: 'Guardiano', passi: [P.issue, P.avvio, P.tl,
+    { n: 'dev', e: 'tl>dev', et: ['task', 'turn-developer'], j: [], t: 'Il job del developer non parte, per esempio per un runner spento o GitHub lento. L\'issue resta con turn-developer.' },
+    { n: 'guard', et: ['task', 'turn-developer'], j: [S('guardiano')], t: '<b>Guardiano</b>, ogni ora: un turno fermo da più di 90 minuti e senza job attivi.' },
+    { n: 'avvio', e: 'guard>avvio', et: ['task', 'turn-developer'], j: [S('avvio')], t: 'L\'avvio riparte <b>dallo stato scritto nei commenti e nel ramo</b>; l\'etichetta dice di chi è il turno.' },
+    { ...P.dev, e: null }, P.verde, ...coda] },
+];
+
+// ---------------------------------------------------------------- riproduzione
+let scenario = 0, passo = 0, timer = null;
+const $ = id => document.getElementById(id);
+
+function evidenzia(nodo, arco) {
+  for (const id in nodi) nodi[id].classList.toggle('attivo', id === nodo);
+  for (const k in archi) archi[k].g.classList.toggle('attivo', k === arco);
+}
+function muovi(arco) {
+  const a = arco && archi[arco];
+  if (!a) { gettone.setAttribute('opacity', 0); return; }
+  const len = a.p.getTotalLength(), t0 = performance.now(), dur = 650;
+  gettone.setAttribute('opacity', 1);
+  (function f(t) {
+    const k = Math.min(1, (t - t0) / dur), pt = a.p.getPointAtLength(len * k);
+    gettone.setAttribute('cx', pt.x); gettone.setAttribute('cy', pt.y);
+    if (k < 1) requestAnimationFrame(f); else gettone.setAttribute('opacity', 0);
+  })(t0);
+}
+function card(j) {
+  const tipo = j.k === 'ai' ? `Claude ${j.modello} · token` : 'nessun token';
+  return `<div class="job ${j.k}"><span class="pallino"></span><span class="nome">${j.nome}</span><span class="tipo">${tipo}</span></div>`;
+}
+function mostra(anima) {
+  const ps = SCENARI[scenario].passi, p = ps[passo];
+  evidenzia(p.n, p.e || null);
+  if (anima) muovi(p.e); else gettone.setAttribute('opacity', 0);
+  $('testo').innerHTML = p.t;
+  $('passo').textContent = `${passo + 1} / ${ps.length}`;
+  $('etichette').innerHTML = (p.et || []).map(e =>
+    `<span class="chip${NUOVE.has(e) ? ' nuova' : ''}${e.startsWith('turn-') ? ' turno' : ''}">${e}</span>`).join('') || '<span class="vuoto">nessuna (issue chiusa)</span>';
+  const j = p.j || [];
+  $('adesso').innerHTML = j.length ? j.map(card).join('')
+    : '<div class="vuoto">nessun job nuovo</div>';
+  let prima = [];
+  for (let i = 0; i < passo; i++) prima = prima.concat(ps[i].j || []);
+  $('finiti').innerHTML = prima.length ? prima.slice(-8).reverse().map(card).join('') : '<div class="vuoto">ancora niente</div>';
+  const tutti = prima.concat(j);
+  $('n-ai').textContent = tutti.filter(x => x.k === 'ai').length;
+  $('n-sc').textContent = tutti.filter(x => x.k === 'script').length;
+}
+function avanti() {
+  const ps = SCENARI[scenario].passi;
+  if (passo < ps.length - 1) { passo++; mostra(true); } else ferma();
+}
+function ferma() { clearInterval(timer); timer = null; $('gioca').textContent = '▶ Avvia'; }
+function gioca() {
+  if (timer) return ferma();
+  if (passo >= SCENARI[scenario].passi.length - 1) { passo = 0; mostra(false); }
+  timer = setInterval(avanti, 2600); $('gioca').textContent = '⏸ Ferma';
+}
+function scegli(i) {
+  ferma(); scenario = i; passo = 0;
+  document.querySelectorAll('#scenari button').forEach((b, k) => b.classList.toggle('attivo', k === i));
+  mostra(false);
+}
+SCENARI.forEach((s, i) => {
+  const b = document.createElement('button'); b.textContent = s.nome; b.onclick = () => scegli(i); $('scenari').appendChild(b);
+});
+$('avanti').onclick = () => { ferma(); avanti(); };
+$('indietro').onclick = () => { ferma(); if (passo > 0) { passo--; mostra(false); } };
+$('daccapo').onclick = () => { ferma(); passo = 0; mostra(false); };
+$('gioca').onclick = gioca;
+scegli(0);
+</script>
+</body>
+</html>

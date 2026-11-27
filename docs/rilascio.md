@@ -31,7 +31,7 @@ produzione.
 
 ## Passaggio di un progetto
 
-1. La catena con questi workflow è in `v1`.
+1. La catena con questi workflow è in `v2`.
 2. PR nel progetto: `release.yml` e `tag-master.yml` sostituiti dai wrapper (stessi nomi:
    `workflow_run` di `Release` aspetta `Tag master`); il vecchio workflow di chiusura delle issue, se c'è, sostituito da
    `in-develop.yml`; `.catena.yml` con `migrazioni` e `chiudi_issue: produzione`.

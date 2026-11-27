@@ -13,6 +13,7 @@ cartella: app                        # dove stanno package.json & co. (. per la 
 container: node:22-alpine            # vuoto = direttamente sul runner
 container_rete: host
 installa: npm ci --no-audit --no-fund --silent
+aggiorna: npm install --no-audit --no-fund   # dopo un cambio di dipendenze: riallinea il lock
 installato_se: node_modules
 lint: npm run -s lint -- --quiet && npm run -s format:check
 tipi: npm run -s typecheck
@@ -37,6 +38,7 @@ docs: ^docs/|^README\.md$
 framework_test: Vitest
 
 guardiano_minuti: 90
+retrospettiva: si                    # si | no: consigli dopo i giri con problemi (docs/configurazione.md)
 
 staging_variabile:                   # es. STAGING_AUTOMATICO; vuoto se il progetto non ha staging
 staging_valore: si

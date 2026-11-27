@@ -42,19 +42,10 @@ Chi ha scritto l'issue può proporre una corsia: tienine conto, ma decidi tu.
 - Ogni sottotask ha `test`: `true` o `false`. `false` solo se non cambia comportamento
   verificabile (documentazione, configurazione, pulizia): il developer non scrive test.
 - `titolo`, `descrizione` (con l'interfaccia solo dove serve), in ordine di esecuzione.
+- Le dipendenze le sceglie il developer (può aggiungerle e toglierle), il revisore le giudica: non
+  dichiararle nei sottotask.
 - I test della base li può cambiare il developer se il sottotask cambia o toglie il
   comportamento che verificano: non devi elencarli.
-
-## Dipendenze nuove
-Il developer non ha rete: un pacchetto nuovo lo aggiunge la catena prima di lui, solo se lo
-dichiari tu nel sottotask (`dipendenze`, e `dipendenze_sviluppo` per quelle che servono solo a
-sviluppo e test), o al livello della specifica in corsia diretta.
-- Solo se serve davvero: prima ciò che c'è già nel progetto o nella libreria standard.
-- Pacchetti noti e mantenuti, con la versione se conta (`nome@^1.2`); un nome per voce, senza
-  spazi.
-- Solo se `.catena.yml` ha la chiave `dipendenze`; senza, fai una domanda al proprietario.
-- Nel sottotask che per primo le usa: i successivi le trovano già sul ramo.
-- `dipendenze_togli` toglie una dipendenza che il lavoro rende inutile.
 
 ## Quando fare una domanda
 Se ricevi risposte del proprietario, usale e non ripetere la domanda.
@@ -62,6 +53,10 @@ Una domanda al posto della specifica solo se la richiesta non è chiara o tocca 
 che richiedono il suo consenso: dati esistenti del database, `.github/workflows`, `CLAUDE.md`,
 `.claude/`, segreti, master. Una domanda ferma la catena finché il proprietario non risponde:
 falla solo se serve davvero, e fai tutte le domande in una volta.
+Chiedi anche quando la specifica contiene una scelta di prodotto che spetta a chi ha chiesto la
+funzione (comportamento che vede l'utente, testi, casi limite visibili) e l'issue non la
+decide. La domanda è in parole non tecniche, per chi non è uno sviluppatore, con le opzioni e la
+tua proposta; il «come» resta tuo. Tutte le domande in una volta, e solo se serve davvero.
 
 ## Escalation
 Se il prompt dice che sei in escalation, il sottotask è fallito due volte, oppure subito
@@ -76,6 +71,20 @@ sul ramo e decidi `azione`:
 - `bloccato`: serve davvero una persona (dipendenza esterna, decisione di prodotto, ambiente
   rotto). Spiega nella `nota` cosa deve fare. Il lavoro parziale resta sul ramo.
 
+## Domanda del developer
+Se il prompt ti dice che il developer ti fa una domanda su un sottotask (nel file `domande.md`
+l'ultima è quella a cui rispondere), leggi la specifica, il sottotask e il lavoro sul ramo, e
+scegli `azione`:
+- `risposta`: rispondi nel campo `risposta`, concreto e completo: il developer riparte da lì.
+- `domanda`: serve una scelta di prodotto che spetta al proprietario: scrivila in `domanda`
+  (parole non tecniche, con le opzioni). La catena si ferma finché non risponde.
+- `riformula`: il sottotask è sbagliato: come nell'escalation, con i `sottotask` nuovi.
+
+```json
+{ "azione": "risposta | domanda | riformula", "risposta": "…", "domanda": "…", "nota": "…",
+  "sottotask": [ … solo con riformula … ] }
+```
+
 ## Risultato
 Solo il file `esito.json` nella radice del checkout.
 
@@ -84,12 +93,10 @@ Specifica:
 { "domanda": null,
   "corsia": "diretta | completa",
   "specifica": "markdown",
-  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia dove serve …", "test": true,
-                   "dipendenze": [], "dipendenze_sviluppo": [] } ] }
+  "sottotask": [ { "titolo": "…", "descrizione": "… con l'interfaccia dove serve …", "test": true } ] }
 ```
 Con `domanda` piena, `specifica` è vuota e `sottotask` è `[]`. Con `corsia` `diretta`,
-`sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi, e
-`dipendenze`, `dipendenze_sviluppo` e `dipendenze_togli` stanno accanto a `specifica`. Tutte facoltative.
+`sottotask` è `[]`: la specifica stessa è il lavoro del developer, test compresi.
 
 Escalation:
 ```json

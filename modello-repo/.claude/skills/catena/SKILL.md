@@ -21,7 +21,7 @@ si toccano i file protetti (`.github/`, `.claude/`, `CLAUDE.md`,
 
 1. `git status` pulito e ramo `develop` aggiornato; altrimenti fermati.
 2. Scarica la catena al suo tag in una cartella temporanea (`$CATENA`), fuori dal repo:
-   `gh repo clone nikodips-tech/catena-agenti "$CATENA" -- --depth 1 --branch v1`
+   `gh repo clone nikodips-tech/catena-agenti "$CATENA" -- --depth 1 --branch v2`
 3. Leggi `.catena.yml` del progetto (comandi, `file_test`, `framework_test`).
 4. Input: un numero di issue (`gh issue view`) oppure la richiesta dell'utente. Scrivi il
    testo in `$CATENA/lavoro/issue.md`. Tutti i file dati stanno in `$CATENA/lavoro/`, mai nel

@@ -2,7 +2,7 @@
 # Unione (niente Claude): quando la CI finisce su un ramo con una pull request aperta che ha
 # `unione-automatica`, verde → squash con il prefisso giusto, ramo cancellato, issue chiusa
 # (o `in-develop` fino al rilascio, con chiudi_issue: produzione);
-# rossa → una riparazione del developer (una volta), poi `bloccato`. Vale per le PR della
+# rossa → una riparazione del developer (una volta), poi `turn-human`. Vale per le PR della
 # catena (rami issue-*) e per quelle aperte in corsia diretta da una sessione locale, se hanno
 # l'etichetta. Alla fine avvia la coda.
 # Variabili: RAMO, SHA, ESITO (success|failure|…), RUN_CI, APP_TOKEN.
@@ -27,8 +27,8 @@ if ha "$etichette_pr" "$E_HOTFIX" || [ "$base" = "$RAMO_PRODUZIONE" ]; then tipo
 
 bloccato() {
   if [ -n "$issue" ]; then
-    printf 'Catena, unione: %s%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$issue" -
-    pf_etichetta_togli "$issue" "$E_IN_CORSO"; pf_etichetta_aggiungi "$issue" "$E_BLOCCATO"
+    printf 'Catena, unione: %s\n\nPer ripartire rispondi con un commento o rimetti `auto`.%s' "$1" "$(riga_esecuzione)" | pf_issue_commenta "$issue" -
+    fermo "$issue"
   else
     pf_pr_commenta "$numero" "Catena, unione: $1"
   fi
@@ -62,7 +62,7 @@ else
   if [ -n "$issue" ] && [ "$riparazioni" -lt "$MAX_RIPARAZIONI" ]; then
     printf '%s %s\n\nLa CI della pull request #%s è rossa:\n\n%s\n\nParte il developer per ripararla.\n' "$T_RIPARAZIONE" "$((riparazioni + 1))" "$numero" "$falliti" | pf_issue_commenta "$issue" -
     { echo "La CI della pull request è rossa. Job falliti:"; echo "$falliti"; echo; echo "Ultime righe dei log:"; pf_ci_log_falliti "$RUN_CI"; } > "$TMP_BASE/nota.txt"
-    pf_passo_avvia developer "$issue" "$issue" 1 "$TMP_BASE/nota.txt"
+    passo developer "$issue" "$issue" 1 "$TMP_BASE/nota.txt"
     exit 0
   fi
   bloccato "i controlli della pull request #$numero non passano."$'\n\n'"$falliti"

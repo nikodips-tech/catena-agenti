@@ -16,5 +16,5 @@ concurrency:
 
 jobs:
   tag:
-    uses: nikodips-tech/catena-agenti/.github/workflows/tag-master.yml@v1
+    uses: nikodips-tech/catena-agenti/.github/workflows/tag-master.yml@v2
     secrets: inherit

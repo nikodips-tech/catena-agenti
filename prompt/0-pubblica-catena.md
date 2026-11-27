@@ -19,12 +19,12 @@ Leggi prima `prompt/regole-sessione.md`. Qui l'unica eccezione alle regole: ques
 ```bash
 git init -b master
 git add -A
-git commit -m "Catena di agenti v1"
+git commit -m "Catena di agenti v2"
 gh repo create nikodips-tech/catena-agenti --public --source . --push \
   --description "Catena di agenti Claude Code per i progetti: workflow riutilizzabili, script e prompt"
-git tag -a v1.0.0 -m "v1.0.0"
-git tag v1
-git push origin v1.0.0 v1
+git tag -a v2.0.0 -m "v2.0.0"
+git tag v2
+git push origin v2.0.0 v2
 ```
 
 **Pubblico**, perché i progetti leggono script e prompt al volo con il token di Actions e
@@ -52,7 +52,7 @@ JSON
 ## 4. Verifica
 
 - `gh api repos/nikodips-tech/catena-agenti/contents/.github/workflows` elenca i sei workflow.
-- `gh api repos/nikodips-tech/catena-agenti/git/ref/tags/v1` esiste.
+- `gh api repos/nikodips-tech/catena-agenti/git/ref/tags/v2` esiste.
 
 ## 5. Resoconto
 

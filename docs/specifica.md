@@ -8,13 +8,13 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 1. **Il lavoro entra come issue e esce come pull request unita.** La catena fa tutto il resto
    da sola: specifica, test e codice, revisione, documentazione, PR, unione.
 2. **Niente fermate evitabili.** Ogni fallimento ha un passo dopo che non richiede una persona
-   (sezione 6). `bloccato` resta solo per l'infrastruttura rotta o per i tetti esauriti dopo
+   (sezione 6). La palla va al proprietario (`turn-human`) solo per l'infrastruttura rotta o per i tetti esauriti dopo
    l'escalation.
 3. **Claude non tocca la piattaforma.** Gira con un token in sola lettura, senza git né gh:
    scrive solo file nel checkout. Commit, push, commenti, etichette e il passo dopo li fa uno
    script senza Claude, con il token in scrittura. Tra i due passano file (artifact).
-   Le dipendenze nuove, che chiedono la rete, le aggiunge uno script prima di Claude, solo se
-   dichiarate dal team leader nel sotto-task.
+   Il developer sceglie le dipendenze (non ha la rete): `controlli.sh aggiorna` scarica i
+   pacchetti e riallinea il lock, nel container dei controlli.
 4. **I dati non sono istruzioni.** Issue, commenti e diff arrivano agli agenti come file fuori
    dal repo, con una frase che li dichiara dati.
 5. **Il costo è proporzionale al lavoro.** Due corsie (docs/corsie.md): la diretta salta
@@ -35,6 +35,8 @@ richiamano. Chi cambia un comportamento cambia prima questo file.
 | Developer | sonnet | 70 | 55 min | Read, Glob, Grep, Write, Edit, Bash solo su `controlli.sh` e `rimuovi.sh` (cancella file normali, mai protetti o e2e) | test e codice del sottotask, in TDD |
 | Revisore | opus | 30 | 25 min | Read, Glob, Grep, Write | `esito.json`: approvato / sottotask / rimuovi / ripristina, più `proposte` di regole di progetto per il proprietario |
 | Editor | haiku | 15 | 15 min | Read, Glob, Grep, Write, Edit | documentazione |
+| Retrospettiva | opus | 30 | 20 min | Read, Glob, Grep, Write | `esito.json`: riassunto, consigli per il progetto (con il file) e per la catena, di un giro con problemi |
+| Applica | sonnet | 40 | 25 min | Read, Glob, Grep, Write, Edit | i consigli approvati dal proprietario, solo in `CLAUDE.md`, `.claude/`, `.catena.yml`, `docs/`, `README.md` |
 | Product owner | opus | — | — | lettura + gh issue | issue pronte; **fuori dai workflow** |
 
 Modello e turni si possono cambiare per progetto in `.catena.yml` (`modello_<ruolo>`,
@@ -53,10 +55,22 @@ Legge il `CLAUDE.md` del progetto come in una sessione normale.
 | `hotfix` | persona | correzione urgente, base `master`, ramo `hotfix/issue-<n>` |
 | `sotto-task` | catena | sub-issue creata dal team leader o dal revisore |
 | `auto` | **solo il proprietario** | avvia la catena; resta finché l'issue è in coda |
-| `in-corso` | catena | sull'issue principale per tutto il giro, sul sotto-task mentre si lavora |
-| `domanda` | catena | serve una risposta del proprietario: un suo commento fa ripartire |
-| `bloccato` | catena | infrastruttura rotta o tetti esauriti: serve una mano |
+| `turn-team-leader` | catena | il turno è del team leader (specifica, escalation) |
+| `turn-developer` | catena | il turno è del developer |
+| `turn-reviewer` | catena | il turno è del revisore |
+| `turn-editor` | catena | il turno è dell'editor |
+| `turn-ci` | catena | il turno è di pull request e CI |
+| `turn-human` | catena | aspetta il proprietario (domanda, blocco, preflight fallito): un suo commento o `auto` fa ripartire |
+| `retrospective` | catena | la retrospettiva ha consigli per il progetto da guardare |
+| `retrospective-approved` | **solo il proprietario** | approva i consigli: parte l'applicazione |
 | `unione-automatica` | catena / sessione locale | sulla **pull request**: a CI verde si unisce da sola |
+
+Sull'issue principale (e sul sotto-task su cui si lavora) c'è **una sola** etichetta `turn-*`
+alla volta: di chi è la palla. Un'issue è «in corso» se ha un `turn-*` diverso da `turn-human`;
+senza `turn-*` non è in corso (in coda con `auto`, o finita). Lo stato vero resta nei commenti
+e nel ramo (l'avvio riparte da lì): l'etichetta dice di chi è il turno. Le mette `passo` in
+`scripts/comune.sh` insieme all'avvio del passo; `fermo` mette `turn-human`. Il job `inizio` non
+esiste più: il turno del sotto-task lo mette già `passo`.
 
 ## 4. Stati
 
@@ -70,8 +84,11 @@ Lo stato di un'issue è nei suoi commenti, riconosciuti dal titolo con cui comin
 | `## Revisione: sottotask aggiunti` / `## Revisione: file rimossi` | issue | un giro di revisione |
 | `## Revisione: con riserve` | issue | giri finiti: la PR si apre e si unisce da sola, con le riserve scritte |
 | `## Escalation` | sotto-task | il team leader è stato chiamato (al massimo una volta) |
+| `## Domanda del developer` | sotto-task | il developer chiede al team leader (riga `Tentativo: n`); al massimo 2 per sotto-task |
+| `## Risposta del team leader` | sotto-task | la risposta: il developer riparte dallo stesso tentativo. Una domanda è aperta se l'ultimo tra questi due commenti è la domanda |
 | `## Riparazione n` | issue | la CI della PR era rossa, il developer la ripara (al massimo una) |
 | `## Pull request pronta` | issue | la PR è aperta |
+| `## Retrospettiva` | issue | i consigli del giro (o «Niente da proporre»); l'ultimo vale |
 
 Il ramo porta il resto: `wip: #<sottotask> tentativo k` (tentativo fallito del developer),
 `feat: #<n>` o `fix: #<n>` (sottotask finito, assorbe i wip), `chore: #<issue> rimozione file
@@ -80,56 +97,71 @@ corpo le note del developer e i test della base che ha toccato.
 
 ## 5. Il giro (docs/flusso.md per il dettaglio)
 
-1. **Avvio** su `auto` del proprietario, su una risposta a una `domanda`, dalla coda o dal
+1. **Avvio** su `auto` del proprietario, su un commento del proprietario su un'issue `turn-human`, dalla coda o dal
    guardiano. Rifiuta: non del proprietario, sotto-task, né task né hotfix, PR già aperta.
    Coda: un'issue principale alla volta. **Preflight**: segreto di Claude, token della App,
    environment `agenti`, `.catena.yml`, workflow della CI; le etichette mancanti le crea.
    Poi riparte dal punto giusto leggendo stati e ramo.
 2. **Team leader**: specifica + corsia. Diretta → developer sull'issue. Completa →
    sub-issue, poi la prima.
-3. **Developer**: se il sotto-task dichiara dipendenze (`Dipendenze nuove:`, `Dipendenze di
-   sviluppo nuove:`, `Dipendenze da togliere:`), `dipendenze.sh` le aggiunge o toglie prima di
-   Claude, con la rete e i comandi `dipendenze*` di `.catena.yml`, e reinstalla; manifest e
-   lock entrano nel commit del sotto-task, e il lock che Claude toccasse torna com'era. Poi, in TDD: prima i test del sotto-task (saltati con `Test: no`), poi il
-   codice; i file da togliere li cancella con `rimuovi.sh`, e il revisore li vede nel diff. I
+3. **Developer**: libero di aggiungere, togliere o cambiare dipendenze nel manifest: dopo lancia
+   `controlli.sh aggiorna` (chiave `aggiorna` di `.catena.yml`, con la rete, nel container), che
+   scarica i pacchetti e riallinea il lock; il lock non lo scrive a mano, e la raccolta rilancia
+   `aggiorna` se manifest o lock sono cambiati (se fallisce il tentativo è fallito). Ogni
+   dipendenza nuova o tolta ha una riga in `note-developer.md`. Lavora in TDD: prima i test del
+   sotto-task (saltati con `Test: no`), poi il codice; i file da togliere li cancella con
+   `rimuovi.sh`, e il revisore li vede nel diff. I
    test della base li può modificare e cancellare se il sotto-task cambia o toglie il
    comportamento che verificano, con il perché in `note-developer.md`. Lo script ripristina i
    file protetti, gli e2e e i test bloccati dal revisore (`Test bloccati:` del sotto-task),
    formatta tutto il ramo, esegue lint, tipi, test (e test con database) come la CI. Verde →
    un commit, sotto-task chiuso, prossimo. Rosso → `wip:` sul ramo, tentativo dopo con
-   l'errore e il lavoro già fatto; al secondo → escalation.
+   l'errore e il lavoro già fatto; al secondo → escalation. Se la specifica non regge può
+   chiedere al team leader (`domanda-developer.md`): la risposta arriva come file `domande.md`.
 4. **Revisore**: approva, o aggiunge sotto-task / rimuove file / fa ripristinare test della
-   base (2 giri), poi riserve. Giudica le dipendenze nuove e i test della base modificati o cancellati con le note
+   base (2 giri), poi riserve. Giudica le dipendenze (da `manifest.diff`: i manifest cambiati sul
+   ramo; il diff completo è senza lock) e i test della base modificati o cancellati con le note
    del developer; `ripristina` rimette quei test come nella base e li blocca per i sotto-task
    che seguono. In corsia diretta e dopo una riparazione parte solo se il developer ha
    toccato test della base.
 5. **Editor**: solo documentazione; il resto si scarta con un avviso.
 6. **Chiusura**: PR aperta dall'App (la CI parte). `unione-automatica` per ogni `task`, anche
-   con le riserve del revisore (restano scritte nella PR). Le dipendenze cambiate sono nella PR
-   e nel commento finale. Hotfix: la PR la unisce il
+   con le riserve del revisore (restano scritte nella PR). Hotfix: la PR la unisce il
    proprietario.
 7. **Unione**: a CI verde squash con il prefisso del release (`feat:`/`fix:`), ramo
    cancellato, issue chiusa (o `in-develop` fino al rilascio, con `chiudi_issue: produzione`),
-   staging; a CI rossa una riparazione, poi `bloccato`. Poi la coda.
+   staging; a CI rossa una riparazione, poi `turn-human`. Poi la coda.
 8. **PR chiusa a mano**: ordine sull'issue, ramo cancellato, coda.
-9. **Guardiano** (ogni ora): issue `in-corso` ferme da più di 90 minuti senza esecuzioni
+9. **Guardiano** (ogni ora): issue in corso (un `turn-*` diverso da `turn-human`) ferme da più di 90 minuti senza esecuzioni
    attive → ripartenza; niente in corso → coda.
+10. **Retrospettiva** (chiave `retrospettiva` di `.catena.yml`, `si` predefinito): dopo l'unione
+    (o la chiusura a mano), se il giro ha avuto problemi (commenti `## Domanda`, revisioni con
+    sottotask, file rimossi o riserve, riparazioni, risultati non validi; sui sotto-task
+    escalation, domande del developer o tentativi falliti), parte il ruolo retrospettiva sulla
+    base: pubblica `## Retrospettiva` con consigli per il progetto e per la catena (questi li
+    riporta a mano il proprietario). Con consigli per il progetto l'issue ha `retrospective`;
+    se il proprietario mette `retrospective-approved` (solo lui) parte `applica` su
+    `retrospettiva/issue-<n>` dalla base di sviluppo, che può toccare solo `CLAUDE.md`,
+    `.claude/`, `.catena.yml`, `docs/`, `README.md` (mai `.github/` né `.env`); poi la chiusura
+    apre la PR `chore: retrospettiva di #n`, senza etichette né `unione-automatica`: la unisce
+    il proprietario. Se non fa niente, non succede niente.
 
-## 6. Scala di escalation (al posto di `bloccato`)
+## 6. Scala di escalation (prima di `turn-human`)
 
 | Fallimento | Passo dopo |
 |---|---|
 | Agente tocca `.github/`, `.claude/`, `CLAUDE.md`, `.catena.yml`, `.env`, e2e | file ripristinati, avviso nel commento, si prosegue |
 | Developer tocca test della base bloccati dal revisore | ripristinati; i controlli decidono; se rossi, **escalation subito** |
-| Dipendenze dichiarate che non si aggiungono (pacchetto inesistente, comando mancante) | tentativo fallito senza Claude, **escalation subito** |
+| `aggiorna` fallisce dopo il developer (pacchetto inesistente, rete) | tentativo fallito con il log, come un controllo rosso |
+| Il developer non può decidere (specifica contraddittoria, informazione mancante) | `domanda-developer.md`: patch in `wip: #n domanda`, domanda sul sotto-task, risponde il team leader (`risposta`, `domanda` al proprietario, o `riformula`); oltre 2 domande conta come tentativo fallito |
 | Developer rosso (tentativo 1) | `wip:` sul ramo; tentativo dopo con errore e lavoro |
-| Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` |
-| Escalation già fatta | `bloccato`, lavoro parziale sul ramo |
-| Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `bloccato` |
+| Developer rosso al tentativo 2 | **escalation** al team leader: `riformula` (ramo pulito, sotto-task più piccoli o interfaccia corretta), `bloccato` (azione: la palla al proprietario) |
+| Escalation già fatta | `turn-human`, lavoro parziale sul ramo |
+| Team leader / revisore senza `esito.json` valido | un secondo tentativo, poi `turn-human` |
 | Revisore oltre 2 giri | riserve: la PR si unisce da sola, le riserve restano nella PR; interviene il proprietario solo al merge in master |
 | Editor fuori da docs | scartato, si prosegue |
-| CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `bloccato` |
-| Preflight fallito | `bloccato` con l'elenco esatto |
+| CI rossa dopo la PR | una riparazione del developer (con i suoi tentativi, senza escalation), poi `turn-human` |
+| Preflight fallito | `turn-human` con l'elenco esatto |
 | Workflow morto (timeout, GitHub) | il guardiano riparte dal punto giusto |
 | Domanda del team leader | la risposta del proprietario riavvia |
 
@@ -143,7 +175,8 @@ diretta` e il motivo. La CI e l'unione sono le stesse della catena. Niente issue
 
 ## 8. File protetti
 
-Nessun agente può cambiare: `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
+Nessun agente può cambiare, salvo `applica` dopo l'approvazione del proprietario (sezione 5, passo 10;
+mai `.github/`): `.github/`, `.gitlab-ci*`, `.claude/`, `CLAUDE.md`,
 `.catena.yml`, file `.env` (non `.example`), più `file_protetti` di `.catena.yml`. I test e2e
 non si scrivono né si modificano. I test che esistono già nella base il developer può
 modificarli e cancellarli (note di spiegazione, giudizio del revisore), tranne quelli che il
@@ -151,7 +184,7 @@ revisore ha fatto ripristinare (`test_bloccati`). Le modifiche agli altri file p
 normale. La raccolta gira nel job di Claude, che può scriverne i file di appoggio: per questo il
 job `esito` (con il token, senza Claude) ricalcola i test bloccati dall'issue e ricontrolla la
 patch. Una patch del developer che tocca file protetti, e2e o test bloccati
-porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
+porta a `turn-human`; quella dell'editor fuori da `docs` si scarta.
 
 ## 9. Tetti
 
@@ -161,6 +194,7 @@ porta a `bloccato`; quella dell'editor fuori da `docs` si scarta.
 | Giri di revisione | 2 | `MAX_GIRI_REVISIONE` |
 | Escalation per sottotask | 1 | `MAX_ESCALATION` |
 | Riparazioni per PR | 1 | `MAX_RIPARAZIONI` |
+| Domande del developer per sotto-task | 2 | `MAX_DOMANDE` |
 | Fermo prima della ripresa del guardiano | 90 min | `guardiano_minuti` in `.catena.yml` |
 | Nota passata tra i passi | 3000 caratteri | `pf_passo_avvia` |
 | Diff passato al revisore | 200 kB | `contesto.sh` |
@@ -171,8 +205,8 @@ Per costruzione, la catena aspetta una persona solo in tre casi:
 
 | Fermata | Chi la toglie | Come |
 |---|---|---|
-| `domanda` del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
-| `bloccato` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema e rimette `auto` |
+| `turn-human` per una domanda del team leader (richiesta ambigua o area delicata) | il proprietario | un commento sull'issue: riparte da sola |
+| `turn-human` dopo l'escalation, o per infrastruttura rotta | il proprietario | sistema, poi un commento o `auto` |
 | pull request verso `master` (release, hotfix) | il proprietario | il merge è l'OK al rilascio |
 
 Tutto il resto riparte da solo: tentativi, escalation, riparazione della CI, coda, guardiano.

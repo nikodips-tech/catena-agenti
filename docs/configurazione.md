@@ -27,12 +27,10 @@ runner. Devono essere **gli stessi della CI**.
 | `container` | `node:22-alpine` | immagine; vuoto = direttamente sul runner. Su ghcr.io anche privata (`docs/ci.md`) |
 | `container_rete` | `host` | rete di `docker run` (serve per i test con database) |
 | `container_opzioni` | `-e TZ=Europe/Rome` | altre opzioni di `docker run` |
-| `installa` | `npm ci --no-audit --no-fund --silent` | dipendenze, prima di Claude |
+| `installa` | `npm ci --no-audit --no-fund --silent` | installa le dipendenze, prima di Claude |
 | `installato_se` | `node_modules` | percorso (dalla cartella) che, se esiste, evita di rifare `installa` |
-| `dipendenze` | `npm install --package-lock-only --ignore-scripts --no-audit --no-fund` | aggiunge le dipendenze dichiarate nel sotto-task (`Dipendenze nuove:`): in coda i nomi. Gira prima di Claude, con la rete, nel `container`; aggiorna manifest e lock senza eseguire codice dei pacchetti. Vuoto = il developer non può aggiungere dipendenze |
-| `dipendenze_sviluppo` | `npm install --package-lock-only --ignore-scripts --no-audit --no-fund --save-dev` | lo stesso per `Dipendenze di sviluppo nuove:` |
-| `dipendenze_togli` | `npm uninstall --package-lock-only --ignore-scripts --no-audit --no-fund` | lo stesso per `Dipendenze da togliere:` |
-| `file_lock` | `(^\|/)package-lock\.json$` | i lock (regex) che, con una chiave `dipendenze*`, scrive solo la catena: se li tocca Claude tornano com'erano. Predefinito: i lock di npm, yarn, pnpm, composer, cargo, poetry, uv, bundler. Non vanno in `file_protetti` |
+| `aggiorna` | `npm install --no-audit --no-fund` | aggiorna le dipendenze dopo un cambio di manifest (il developer lo lancia con `controlli.sh aggiorna`; la raccolta lo rilancia se manifest o lock sono cambiati). Gira nel `container`, con la rete, sempre (senza `installato_se`). Vuoto = si usa `installa` per il comando, ma la raccolta non lo rilancia da sola |
+| `file_dipendenze` | `(^\|/)package\.json$` | i manifest (regex) che il revisore vede in `manifest.diff`. Predefinito: package.json, composer.json, requirements*.txt, pyproject.toml, Cargo.toml, go.mod, Gemfile |
 | `cache` | `.cache/npm .cache/cargo` | cartelle (dalla cartella, ignorate da git) da tenere in cache tra un giro e l'altro; vuoto = niente cache (`docs/ci.md`) |
 | `cache_chiave` | `package-lock.json Cargo.lock` | file (dalla cartella) il cui cambio rifà la cache |
 | `lint` | `npm run -s lint -- --quiet && npm run -s format:check` | solo errori |
@@ -64,6 +62,7 @@ runner. Devono essere **gli stessi della CI**.
 | `modello_team_leader`, `modello_developer`, `modello_revisore`, `modello_editor` | vedi specifica | modello per ruolo |
 | `turni_<ruolo>` | vedi specifica | turni massimi per ruolo |
 | `guardiano_minuti` | `90` | fermo oltre il quale il guardiano riparte |
+| `retrospettiva` | `si` | `si` (predefinito) o `no`: dopo un giro con problemi la catena propone consigli per il progetto e per la catena (`## Retrospettiva`); quelli per il progetto si applicano solo se il proprietario mette `retrospective-approved` |
 
 ## CI (docs/ci.md)
 
