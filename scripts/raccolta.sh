@@ -41,17 +41,6 @@ stato() { echo "$1" > "$ESITO_DIR/stato"; }
 avviso_file "File protetti toccati e ripristinati" "$(ripristina_protetti "$BASE")"
 fotografa
 
-# Dipendenze dichiarate non aggiunte (dipendenze.sh): Claude non è partito, tentativo fallito
-if [ "$ruolo" = developer ] && [ -s "$ESITO_DIR/dipendenze-fallite.md" ]; then
-  stato fallito
-  cp "$ESITO_DIR/dipendenze-fallite.md" "$ESITO_DIR/messaggio.md"
-  echo "dipendenze dichiarate non aggiunte" > "$ESITO_DIR/motivo.txt"
-  : > "$ESITO_DIR/test-ripristinati.txt"
-  echo "Claude non è partito" > "$ESITO_DIR/consumo.txt"
-  log "developer: dipendenze non aggiunte"
-  exit 0
-fi
-
 case "$ruolo" in
   team-leader|revisore)
     # Non devono toccare file: se lo fanno, le modifiche si ignorano
@@ -61,11 +50,6 @@ case "$ruolo" in
   developer)
     e2e=$(grep -P "$RE_E2E" "$ESITO_DIR/file.txt" || true)
     if [ -n "$e2e" ]; then mapfile -t f <<< "$e2e"; ripristina "${f[@]}"; avviso_file "Test e2e toccati e ripristinati" "$e2e"; fi
-    # Con la chiave `dipendenze` il lock lo scrive solo dipendenze.sh: il resto torna com'era
-    if dipendenze_attive; then
-      lock=$(git diff --cached --name-only --no-renames "${DOPO_DIPENDENZE:-$INIZIO}" | grep -P "$RE_LOCK" || true)
-      if [ -n "$lock" ]; then mapfile -t f <<< "$lock"; ripristina_da "${DOPO_DIPENDENZE:-$INIZIO}" "${f[@]}"; avviso_file "Lock toccati e ripristinati (le dipendenze nuove le aggiunge la catena, se dichiarate nel sotto-task)" "$lock"; fi
-    fi
     # I test della base si possono modificare e cancellare (il revisore li giudica). Si
     # ripristinano solo quelli che il revisore ha bloccato (test-bloccati.txt, contesto.sh)
     bloccati="$CONTESTO/test-bloccati.txt"; [ -f "$bloccati" ] || : > "$bloccati"
@@ -85,7 +69,17 @@ case "$ruolo" in
     mapfile -t cambiati < <(git diff --cached --name-only --diff-filter=d --no-renames "origin/$BASE" || true)
     [ "${#cambiati[@]}" -eq 0 ] || bash "$CATENA/scripts/controlli.sh" formatta "${cambiati[@]}" > /dev/null 2>&1 || true
     fotografa
-    if [ ! -s "$ESITO_DIR/file.txt" ] && [ -z "$(git log --format=%s "origin/$BASE..HEAD" | grep -E "^wip: #$SOTTOTASK " || true)" ]; then
+    # Manifest o lock cambiati: `aggiorna` riallinea il lock al manifest (anche se il developer
+    # se n'è dimenticato o l'ha scritto a mano). Con la rete e nel container dei controlli
+    aggiorna_ko=""
+    if [ -n "$(cfg aggiorna)" ] && grep -qP -- "$RE_MANIFEST|$RE_LOCK" "$ESITO_DIR/file.txt"; then
+      if bash "$CATENA/scripts/controlli.sh" aggiorna > "$LOG_DIR/aggiorna-raccolta.log" 2>&1; then fotografa; else aggiorna_ko=1; fi
+    fi
+    if [ -n "$aggiorna_ko" ]; then
+      stato fallito
+      tail -c 4000 "$LOG_DIR/aggiorna-raccolta.log" > "$ESITO_DIR/messaggio.md"
+      echo "aggiornamento delle dipendenze fallito" > "$ESITO_DIR/motivo.txt"
+    elif [ ! -s "$ESITO_DIR/file.txt" ] && [ -z "$(git log --format=%s "origin/$BASE..HEAD" | grep -E "^wip: #$SOTTOTASK " || true)" ]; then
       stato fallito
       echo "il developer non ha modificato nessun file (uscita di Claude: $uscita)" | tee "$ESITO_DIR/messaggio.md" > "$ESITO_DIR/motivo.txt"
     # `if` e non `$?`: la shell di Actions esce al primo errore e lo stato non verrebbe scritto

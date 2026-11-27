@@ -57,7 +57,7 @@ alla volta (l'issue in coda tiene `auto`). Preflight (`preflight.sh`). Poi la ri
    non entra nel contesto di Claude); `agente.sh` lancia la CLI senza nessun token di
    piattaforma nell'ambiente; `raccolta.sh` misura le modifiche rispetto al commit di
    partenza, ripristina i file protetti, gli e2e e i test bloccati dal revisore, scarta quelli fuori ambito,
-   formatta, esegue i controlli (developer), scrive l'artifact `esito`.
+   formatta, riallinea le dipendenze con `aggiorna` se manifest o lock sono cambiati, esegue i controlli (developer), scrive l'artifact `esito`.
 3. `esito` (A scrittura): `esito-<ruolo>.sh` applica la patch, committa, pusha, commenta,
    etichetta e avvia il passo dopo con `pf_passo_avvia` (un `workflow_dispatch` del wrapper
    del progetto). Un'esecuzione annullata non arriva qui.

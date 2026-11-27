@@ -20,7 +20,7 @@ case "$ruolo" in
   team-leader|revisore)
     compito="Scrivi il risultato solo nel file esito.json nella radice del checkout ($REPO_DIR/esito.json). Non modificare altri file." ;;
   developer)
-    compito="Tentativo ${TENTATIVO:-1} di $MAX_TENTATIVI. Prima i test del sotto-task, poi il codice, direttamente nel checkout. Per i controlli usa solo: bash $CATENA/scripts/controlli.sh lint | tipi | test | test-db | tutto (output corto; il log completo è nel percorso che stampa). I file che il sotto-task chiede di togliere li cancelli con: bash $CATENA/scripts/rimuovi.sh <file…>. Se modifichi o cancelli test della base, o fai scelte che il revisore deve conoscere, scrivi una riga ciascuna con il perché in $REPO_DIR/note-developer.md." ;;
+    compito="Tentativo ${TENTATIVO:-1} di $MAX_TENTATIVI. Prima i test del sotto-task, poi il codice, direttamente nel checkout. Per i controlli usa solo: bash $CATENA/scripts/controlli.sh lint | tipi | test | test-db | aggiorna | tutto (output corto; il log completo è nel percorso che stampa). I file che il sotto-task chiede di togliere li cancelli con: bash $CATENA/scripts/rimuovi.sh <file…>. Se modifichi o cancelli test della base, o fai scelte che il revisore deve conoscere, scrivi una riga ciascuna con il perché in $REPO_DIR/note-developer.md. Puoi aggiungere, togliere o cambiare dipendenze nel manifest: dopo lancia bash $CATENA/scripts/controlli.sh aggiorna (scarica e aggiorna il lock); il lock non lo scrivi a mano." ;;
   editor)
     compito="Modifica solo la documentazione, direttamente nel checkout." ;;
   *) errore "ruolo sconosciuto: $ruolo"; exit 2 ;;

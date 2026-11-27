@@ -14,10 +14,8 @@ container_rete: host
 container_opzioni: -e APP_ENV=testing -e DB_HOST=127.0.0.1
 installa: composer install --no-interaction --no-progress --prefer-dist --quiet
 installato_se: vendor
-# Dipendenze nuove dichiarate dal team leader (nome come vendor/pacchetto:^1.2)
-dipendenze: composer require --no-install --no-scripts --no-interaction
-dipendenze_sviluppo: composer require --dev --no-install --no-scripts --no-interaction
-dipendenze_togli: composer remove --no-install --no-scripts --no-interaction
+# Il developer cambia le dipendenze e rigenera il lock con `controlli.sh aggiorna`
+aggiorna: composer update --no-interaction --no-scripts --minimal-changes
 lint: vendor/bin/pint --test
 tipi: vendor/bin/phpstan analyse --no-progress --error-format=raw
 test: vendor/bin/phpunit --testsuite=Unit --no-progress

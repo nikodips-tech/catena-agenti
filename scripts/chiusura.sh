@@ -15,9 +15,6 @@ approvata=$(conta_commenti "$ISSUE" "$T_REV_OK"); riserve=$(conta_commenti "$ISS
 revisione="nessuna (corsia diretta: garantisce la CI)"
 [ "$riserve" -eq 0 ] || revisione="con riserve"
 [ "$approvata" -eq 0 ] || revisione="approvata"
-# Le dipendenze nuove: righe del corpo dei commit del ramo (esito-developer.sh)
-git -C "$REPO_DIR" fetch -q origin "+refs/heads/*:refs/remotes/origin/*" 2> /dev/null || true
-dipendenze=$(git -C "$REPO_DIR" log --format=%b "origin/$base..origin/$ramo" 2> /dev/null | dipendenze_righe)
 con_riserve=no; [ "$revisione" != "con riserve" ] || con_riserve=si
 unione_automatica=si
 [ "$tipo" = task ] || unione_automatica=no
@@ -28,7 +25,6 @@ if [ -z "$pr" ]; then
   sotto=$(pf_sottoissue "$ISSUE" | jq -r '.[] | "- #\(.numero) \(.titolo)"')
   { printf '%s\n\nCorsia: %s\nRevisione: %s\n' "$(riferimento_issue "$ISSUE" "$base")" "$corsia" "$revisione"
     [ -z "$sotto" ] || printf '\nSotto-task:\n\n%s\n' "$sotto"
-    [ -z "$dipendenze" ] || printf '\n%s\n' "$dipendenze"
     if [ "$con_riserve" = si ]; then printf '\nRiserve del revisore:\n\n%s\n' "$(commento_con_titolo "$ISSUE" "$T_REV_RISERVE" | tronca 4000)"; fi
     printf '\nAperta dalla catena di agenti.\n'; } > "$TMP_BASE/corpo.md"
   pr=$(pf_pr_apri "$ramo" "$base" "$titolo" "$TMP_BASE/corpo.md")
@@ -49,5 +45,4 @@ case "$tipo-$unione_automatica" in
   hotfix-*) testo+="È un hotfix: l'unione in \`$base\` la fai tu, dopo i controlli." ;;
   *) testo+="Non si unisce da sola: l'unione spetta a te." ;;
 esac
-[ -z "$dipendenze" ] || testo+=$'\n\n'"$dipendenze"
 pf_commenta_testo "$ISSUE" "$testo"

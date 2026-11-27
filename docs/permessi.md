@@ -9,11 +9,12 @@
 | **Identità "App"** | aprire PR, push che fanno partire la CI, unire PR in `develop` | leggere o scrivere issue (non serve e così non lo fa nessuno per sbaglio) |
 | **Proprietario** | mettere `auto`, rispondere alle domande, unire in `master`, cambiare `.github/`, `CLAUDE.md`, `.claude/` | — |
 
-Le dipendenze nuove (chiavi `dipendenze*`) le aggiunge `dipendenze.sh`, con la rete, prima di
-Claude e solo se le ha dichiarate il team leader: il comando aggiorna manifest e lock senza
-eseguire codice dei pacchetti. `installa`, dopo, esegue gli script di installazione come per le
-dipendenze di sempre: un pacchetto nuovo gira nel job prima della revisione, con il token del
-job in sola lettura. Dove il progetto lo permette, `installa` con `--ignore-scripts`.
+Le dipendenze le cambia il developer, che non ha la rete: `aggiorna` (`controlli.sh aggiorna`)
+gira nel container dei controlli, con la rete, e scarica i pacchetti e riallinea il lock; la
+raccolta lo rilancia se manifest o lock sono cambiati. Esegue anche gli script di installazione
+dei pacchetti nuovi, prima della revisione, nel container che vede solo la cartella del progetto
+e nessuna variabile del job. Claude stesso non ha rete. Dove il progetto lo permette,
+`aggiorna` con `--ignore-scripts`. Il revisore giudica le dipendenze dal `manifest.diff`.
 
 Perché due identità: su GitHub (e su quasi tutte le piattaforme) gli eventi causati dal token
 automatico di un job **non fanno partire altri workflow**, per evitare cicli. La PR aperta e
@@ -112,4 +113,4 @@ gh api repos/<owner>/<repo>/rules/branches/develop        # verifica
 | Catena non trovata al checkout | repo della catena privato | pubblico, oppure `CATENA_TOKEN` |
 | Chiamata al workflow riutilizzabile rifiutata | accesso ai workflow del repo della catena | repo pubblico, oppure Settings → Actions → Access |
 | Team leader "riformula" fermo dopo il commento di escalation, "not a git repository" | `git fetch` in `esito-team-leader.sh` prima di entrare nel checkout | `cd "$REPO_DIR"` prima dei comandi git; gli script che usano git entrano nel checkout in cima o con `ramo_checkout` |
-| Sotto-task in escalation e poi `bloccato` dopo una dipendenza nuova, `npm ci` rosso | il developer, senza rete, scriveva il manifest ma non poteva aggiornare il lock | dipendenze dichiarate dal team leader e aggiunte da `dipendenze.sh` prima di Claude, con la rete (chiavi `dipendenze*`); il lock lo scrive solo la catena |
+| Sotto-task in escalation e poi `bloccato` dopo una dipendenza nuova, `npm ci` rosso | il developer, senza rete, scriveva il manifest ma non poteva aggiornare il lock | `aggiorna` (`controlli.sh aggiorna`, nel container con la rete) rigenera il lock; la raccolta lo rilancia se manifest o lock cambiano |

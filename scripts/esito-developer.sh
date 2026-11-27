@@ -59,14 +59,11 @@ if [ "$stato" != ok ]; then
   # Rosso con test della base ripristinati: il tentativo dopo rifarebbe la stessa modifica,
   # quindi si salta subito al team leader, che decide se tenerli bloccati o sbloccarli
   ripristinati=$(paste -sd, "$ESITO_DIR/test-ripristinati.txt" 2> /dev/null || true)
-  # Dipendenze dichiarate che non si aggiungono: un altro tentativo darebbe lo stesso errore
-  dip_ko=""; [ ! -s "$ESITO_DIR/dipendenze-fallite.md" ] || dip_ko=si
-  if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ] && [ -z "$ripristinati" ] && [ -z "$dip_ko" ]; then
+  if [ "$TENTATIVO" -lt "$MAX_TENTATIVI" ] && [ -z "$ripristinati" ]; then
     pf_passo_avvia developer "$ISSUE" "$SOTTOTASK" "$((TENTATIVO + 1))" "$TMP_BASE/nota.txt"
     exit 0
   fi
   if [ -n "$ripristinati" ]; then perche="ha toccato test bloccati dal revisore ($ripristinati)"
-  elif [ -n "$dip_ko" ]; then perche="non ha potuto aggiungere le dipendenze dichiarate"
   else perche="è fallito $MAX_TENTATIVI volte"; fi
   # Riparazione di una CI rossa: niente escalation (riformulare a PR aperta riscriverebbe il
   # ramo), una sola riparazione e poi `bloccato` (docs/specifica.md, Scala di escalation)
@@ -81,12 +78,6 @@ if [ "$stato" != ok ]; then
   bloccato "$perche anche dopo l'escalation. Ultimo errore:"$'\n\n```\n'"$(tail -c 2500 <<< "$messaggio")"$'\n```'
 fi
 
-# Le dipendenze dichiarate (dall'issue, con il token): nel corpo del commit, le leggono revisore e PR
-dipendenze=""
-if dipendenze_attive; then
-  if [ "$diretto" = 1 ]; then dipendenze=$(commento_con_titolo "$ISSUE" "$T_SPECIFICA" | dipendenze_righe); else dipendenze=$(pf_issue_corpo "$SOTTOTASK" | dipendenze_righe); fi
-fi
-
 # Verde: un solo commit che assorbe i tentativi precedenti. Il corpo porta note e test della
 # base toccati: il revisore li ritrova nel log
 primo_wip=$(git log --reverse --format='%H %s' "origin/$base..HEAD" | grep -E " wip: #$SOTTOTASK " | sed -n 1p | cut -d' ' -f1 || true)
@@ -97,7 +88,6 @@ if [ -n "$primo_wip" ]; then git reset -q --soft "$primo_wip^"; forza=(--force);
 { echo "$pref: #$SOTTOTASK"
   if [ -n "$toccati_base" ]; then printf '\nTest della base modificati (M) o cancellati (D):\n%s\n' "$(tr '\t' ' ' <<< "$toccati_base")"; fi
   if [ -n "$note" ]; then printf '\nNote del developer:\n%s\n' "$note"; fi
-  if [ -n "$dipendenze" ]; then printf '\n%s\n' "$dipendenze"; fi
 } > "$TMP_BASE/commit.txt"
 git commit -q --allow-empty -F "$TMP_BASE/commit.txt"
 pf_push "${forza[@]}" "$ramo"

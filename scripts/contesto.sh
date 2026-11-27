@@ -36,8 +36,8 @@ nota_md() {
 }
 differenze() {
   git fetch -q origin "+refs/heads/*:refs/remotes/origin/*"
-  git diff "origin/$BASE...HEAD" | limita 200000 > "$CONTESTO/differenze.diff"
-  descrivi differenze.diff "le differenze tra $BASE e il ramo $RAMO (tutto il lavoro fatto)"
+  git diff "origin/$BASE...HEAD" -- . "${LOCK_ESCLUSI[@]}" | limita 200000 > "$CONTESTO/differenze.diff"
+  descrivi differenze.diff "le differenze tra $BASE e il ramo $RAMO (tutto il lavoro fatto, senza i lock)"
 }
 
 case "$ruolo" in
@@ -97,9 +97,13 @@ case "$ruolo" in
       if [ -n "$corpo" ]; then printf '%s\n%s\n\n' "$(git show -s --format=%s "$c")" "$corpo"; fi
     done > "$CONTESTO/note-developer.md"
     descrivi note-developer.md "le note del developer sui sotto-task: perché ha toccato test della base o fatto scelte particolari (vuoto se nessuna)"
-    # Le dipendenze nuove le scrive esito-developer.sh nel corpo dei commit (righe dell'issue)
-    git log --format=%b "origin/$BASE..HEAD" | dipendenze_righe > "$CONTESTO/dipendenze.txt"
-    descrivi dipendenze.txt "le dipendenze nuove aggiunte sul ramo (vuoto se nessuna): giudicale"
+    # I manifest delle dipendenze cambiati sul ramo (i lock sono fuori da differenze.diff)
+    git diff --name-only --no-renames "origin/$BASE...HEAD" | grep -P "$RE_MANIFEST" > "$TMP_BASE/manifest.txt" || true
+    if [ -s "$TMP_BASE/manifest.txt" ]; then
+      mapfile -t manifest < "$TMP_BASE/manifest.txt"
+      git diff "origin/$BASE...HEAD" -- "${manifest[@]}" | limita 100000 > "$CONTESTO/manifest.diff"
+    else : > "$CONTESTO/manifest.diff"; fi
+    descrivi manifest.diff "i manifest delle dipendenze cambiati sul ramo (vuoto se nessuno): giudica le dipendenze aggiunte e tolte"
     pf_issue_commenti "$ISSUE" | jq -r '[.[] | select(.corpo | startswith("## Revisione")) | .corpo] | join("\n\n---\n\n")' > "$CONTESTO/revisioni-precedenti.md"
     descrivi revisioni-precedenti.md "le tue revisioni precedenti su questa issue (vuoto al primo giro): non ripetere richieste già fatte" ;;
   editor)

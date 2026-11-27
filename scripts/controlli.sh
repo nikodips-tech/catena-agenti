@@ -4,7 +4,7 @@
 # ogni turno: per ogni controllo nome e OK/FALLITO e, se fallisce, al massimo 30 righe di errore
 # più il percorso del log completo (in LOG_DIR, fuori dal repo, caricato come artifact).
 #
-# Uso: controlli.sh install | formatta <file…> | lint | tipi | test | test-db | tutto
+# Uso: controlli.sh install | aggiorna | formatta <file…> | lint | tipi | test | test-db | tutto
 # Chiavi lette da .catena.yml: docs/configurazione.md.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/comune.sh"
@@ -33,6 +33,25 @@ installa() {
   if [ -n "$segno" ] && [ -e "$CARTELLA/$segno" ] && [ -z "${CATENA_REINSTALLA:-}" ]; then echo "install: già fatto"; return 0; fi
   if esegui "$comando" > "$LOG_DIR/install.log" 2>&1; then echo "install: OK"; return 0; fi
   echo "install: FALLITO"; tail -n 30 "$LOG_DIR/install.log"; echo "Log completo: $LOG_DIR/install.log"
+  return 1
+}
+
+# aggiorna: aggiorna le dipendenze (manifest cambiato → lock coerente) con la chiave `aggiorna`,
+# o `installa` se manca. Sempre, senza il salto di `installato_se`. Nel container i file li
+# riscrive root: quelli cambiati tornano all'utente del runner
+aggiorna() {
+  local comando container cambiati; comando=$(cfg aggiorna); [ -n "$comando" ] || comando=$(cfg installa)
+  [ -n "$comando" ] || { echo "aggiorna: saltato (non configurato)"; return 0; }
+  if esegui "$comando" > "$LOG_DIR/aggiorna.log" 2>&1; then
+    echo "aggiorna: OK"
+    container=$(cfg container)
+    if [ -n "$container" ]; then
+      mapfile -t cambiati < <(git status --porcelain | cut -c4-)
+      [ "${#cambiati[@]}" -eq 0 ] || docker run --rm -v "$REPO_DIR:/r" -w /r "$container" chown "$(id -u):$(id -g)" -- "${cambiati[@]}" > /dev/null 2>&1 || true
+    fi
+    return 0
+  fi
+  echo "aggiorna: FALLITO"; tail -n 30 "$LOG_DIR/aggiorna.log"; echo "Log completo: $LOG_DIR/aggiorna.log"
   return 1
 }
 
@@ -71,6 +90,7 @@ formatta() {
 
 case "${1:-}" in
   install) installa ;;
+  aggiorna) aggiorna ;;
   formatta) shift; formatta "$@" ;;
   lint) controlla lint "$(cfg lint)" ;;
   tipi) controlla tipi "$(cfg tipi)" ;;
@@ -84,5 +104,5 @@ case "${1:-}" in
     controlla test "$(cfg test)" || ko=1
     test_db || ko=1
     exit $ko ;;
-  *) echo "uso: controlli.sh install | formatta <file…> | lint | tipi | test | test-db | tutto" >&2; exit 2 ;;
+  *) echo "uso: controlli.sh install | aggiorna | formatta <file…> | lint | tipi | test | test-db | tutto" >&2; exit 2 ;;
 esac

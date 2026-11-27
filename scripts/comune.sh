@@ -157,24 +157,12 @@ elenco_riga() {
 # developer non può toccare (la riga "Test bloccati: a, b" del sotto-task), uno per riga
 test_bloccati() { elenco_riga "$1" "Test bloccati"; }
 
-# Dipendenze nuove dichiarate nel sotto-task (o nella specifica in corsia diretta): le aggiunge
-# dipendenze.sh prima di Claude. Un nome è una parola sola (niente spazi né caratteri della shell)
-T_DIP="Dipendenze nuove"; T_DIP_SVILUPPO="Dipendenze di sviluppo nuove"; T_DIP_TOGLI="Dipendenze da togliere"
-RE_PACCHETTO='^[A-Za-z0-9@][A-Za-z0-9@/._~^:+-]*$'
-# dipendenze_attive: vero se .catena.yml ha almeno un comando delle dipendenze
-dipendenze_attive() { [ -n "$(cfg dipendenze)$(cfg dipendenze_sviluppo)$(cfg dipendenze_togli)" ]; }
-# Con le dipendenze attive il lock lo scrive solo dipendenze.sh: raccolta.sh rimette il resto
-RE_LOCK=$(cfg file_lock '(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock)$')
-# dipendenze_righe: da stdin, le righe delle dipendenze (nuove, di sviluppo, da togliere)
-dipendenze_righe() { tr -d '\r' | grep -E "^($T_DIP|$T_DIP_SVILUPPO|$T_DIP_TOGLI):" | sort -u || true; }
-
-# righe_dipendenze <file esito> <elemento jq>: le righe delle dipendenze dichiarate
-righe_dipendenze() {
-  local d
-  d=$(jq -r "($2.dipendenze // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP" "$d"
-  d=$(jq -r "($2.dipendenze_sviluppo // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_SVILUPPO" "$d"
-  d=$(jq -r "($2.dipendenze_togli // []) | join(\", \")" "$1"); [ -z "$d" ] || printf '\n%s: %s\n' "$T_DIP_TOGLI" "$d"
-}
+# Manifest delle dipendenze (li giudica il revisore, manifest.diff) e lock (enormi: fuori dal diff)
+RE_MANIFEST=$(cfg file_dipendenze '(^|/)(package\.json|composer\.json|requirements[^/]*\.txt|pyproject\.toml|Cargo\.toml|go\.mod|Gemfile)$')
+RE_LOCK='(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock|go\.sum)$'
+LOCK_ESCLUSI=(':(exclude,glob)**/package-lock.json' ':(exclude,glob)**/npm-shrinkwrap.json' ':(exclude,glob)**/yarn.lock'
+  ':(exclude,glob)**/pnpm-lock.yaml' ':(exclude,glob)**/composer.lock' ':(exclude,glob)**/Cargo.lock'
+  ':(exclude,glob)**/poetry.lock' ':(exclude,glob)**/uv.lock' ':(exclude,glob)**/Gemfile.lock' ':(exclude,glob)**/go.sum')
 
 # righe_sottotask <file esito> <elemento jq>: le righe di servizio in fondo al corpo di un
 # sotto-task. `== false` e non `// true`: per jq `false // true` vale true
@@ -183,21 +171,15 @@ righe_sottotask() {
   [ "$(jq -r "$2.test == false" "$1")" != true ] || printf '\nTest: no\n'
   tb=$(jq -r "($2.test_bloccati // []) | join(\", \")" "$1")
   [ -z "$tb" ] || printf '\nTest bloccati: %s\n' "$tb"
-  righe_dipendenze "$1" "$2"
 }
 
-# Validazione jq delle dipendenze dichiarate di un oggetto (sotto-task o specifica diretta)
-DIPENDENZE_VALIDE='(((.dipendenze // []) | type) == "array" and ((.dipendenze_sviluppo // []) | type) == "array"
-  and ((.dipendenze_togli // []) | type) == "array"
-  and all(((.dipendenze // []) + (.dipendenze_sviluppo // []) + (.dipendenze_togli // []))[]; type == "string" and test("'"$RE_PACCHETTO"'")))'
 # Validazione jq di un elenco di sotto-task (team leader e revisore)
 SOTTOTASK_VALIDI='all(.[]; (.titolo | type) == "string" and (.titolo | length) > 0 and (.descrizione | type) == "string"
   and ((.test // true) | type) == "boolean"
-  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0)
-  and '"$DIPENDENZE_VALIDE"')'
+  and ((.test_bloccati // []) | type) == "array" and all((.test_bloccati // [])[]; type == "string" and length > 0))'
 
 # esegui <comando shell>: nella `cartella` del progetto, nel `container` se configurato
-# (controlli.sh, dipendenze.sh)
+# (controlli.sh)
 esegui() {
   local cartella container
   cartella=$(cfg cartella .); container=$(cfg container)
